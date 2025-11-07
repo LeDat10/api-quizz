@@ -1,0 +1,244 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
+import { CoursesService } from './courses.service';
+import { CreateCourseDto } from './dtos/create-course.dto';
+import { UpdateCourseDto } from './dtos/update-course.dto';
+import {
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { CourseResponseDto } from './dtos/course-response.dto';
+import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';
+import { PaginationResponse } from 'src/common/pagination/dtos/pagination-response.dto';
+import { BaseResponseDto } from 'src/common/response/dtos/base-response.dto';
+
+@ApiTags('Courses')
+@Controller('courses')
+export class CoursesController {
+  constructor(private readonly coursesService: CoursesService) {}
+
+  @Get()
+  @ApiOperation({
+    summary: 'Get all courses',
+    description: 'Retrieve all courses with pagination and optional filters.',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    example: 1,
+    description: 'Page number (default: 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    example: 10,
+    description: 'Items per page (default: 10)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved courses list',
+    type: PaginationResponse<CourseResponseDto>,
+    isArray: false,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid query parameters' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async getAllCourses(@Query() paginationQueryDto: PaginationQueryDto) {
+    return await this.coursesService.getAllCourses(paginationQueryDto);
+  }
+
+  @Get('deleted')
+  @ApiOperation({
+    summary: 'Get all deleted courses',
+    description:
+      'Retrieve all soft-deleted courses for administrative or restoration purposes.',
+  })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved deleted courses',
+    type: PaginationResponse<CourseResponseDto>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid query parameters' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async getAllCoursesDeleted(
+    @Query() paginationQueryDto: PaginationQueryDto,
+  ) {
+    return this.coursesService.getAllCourseDeleted(paginationQueryDto);
+  }
+
+  @Post()
+  @ApiOperation({
+    summary: 'Create a Course',
+    description: 'Upload and create a new Course in the system.',
+  })
+  @ApiBody({ type: CreateCourseDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Course successfully created',
+    type: BaseResponseDto<CourseResponseDto>,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input or missing required fields',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Category not found (if categoryId is provided)',
+  })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async createCourse(@Body() createCourseDto: CreateCourseDto) {
+    return await this.coursesService.createCourse(createCourseDto);
+  }
+
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Get Course detail',
+    description:
+      'Retrieve detailed information about a specific Course by its ID, including metadata and related information.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Unique identifier of the Course',
+    example: 1,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved Course details',
+    type: BaseResponseDto<CourseResponseDto>,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid ID parameter or unsupported resource type',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Course not found or has been deleted',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  public async getCourseDetail(@Param('id', ParseIntPipe) id: number) {
+    return await this.coursesService.getCourseDetail(id);
+  }
+
+  @Patch(':id')
+  @ApiOperation({
+    summary: 'Update a Course',
+    description: 'Update the details of an existing Course by its ID.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The ID of the Course',
+    example: 1,
+  })
+  @ApiBody({ type: UpdateCourseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Course successfully updated',
+    type: BaseResponseDto<CourseResponseDto>,
+  })
+  @ApiResponse({ status: 404, description: 'Course not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async updateCourse(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateCourseDto: UpdateCourseDto,
+  ) {
+    return await this.coursesService.updateCourse(updateCourseDto, id);
+  }
+
+  @Patch(':id/restore')
+  @ApiOperation({
+    summary: 'Restore a soft-deleted Course',
+    description: 'Restore a previously soft-deleted Course by its ID.',
+  })
+  @ApiParam({ name: 'id', description: 'ID of the Course', example: 1 })
+  @ApiResponse({
+    status: 200,
+    description: 'Course successfully restored',
+    type: BaseResponseDto<CourseResponseDto>,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Course not found or already active',
+  })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async restoreCourse(@Param('id', ParseIntPipe) id: number) {
+    return this.coursesService.restoreCourse(id);
+  }
+
+  @Patch('restore-multiple')
+  @ApiOperation({
+    summary: 'Restore multiple Course',
+    description:
+      'Restore several soft-deleted Course at once by providing a list of IDs.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'array',
+      items: { type: 'number', example: 1 },
+      example: [1, 2, 3],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Multiple courses successfully restored',
+    type: BaseResponseDto<CourseResponseDto>,
+  })
+  @ApiResponse({ status: 400, description: 'No course IDs provided' })
+  @ApiResponse({ status: 404, description: 'Some or all courses not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async restoreCourseMultiple(@Body() ids: number[]) {
+    return this.coursesService.restoreCourseMultiple(ids);
+  }
+
+  @Delete(':id/soft-delete')
+  @ApiOperation({
+    summary: 'Soft delete a Course',
+    description:
+      'Mark a Course as deleted without removing it permanently from the database.',
+  })
+  @ApiParam({ name: 'id', description: 'ID of the Course', example: 1 })
+  @ApiResponse({
+    status: 200,
+    description: 'Course successfully soft deleted',
+    type: BaseResponseDto<CourseResponseDto>,
+  })
+  @ApiResponse({ status: 404, description: 'Course not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async softDeleteCourse(@Param('id', ParseIntPipe) id: number) {
+    return await this.coursesService.softDeleteCourse(id);
+  }
+
+  @Delete(':id/hard-delete')
+  @ApiOperation({
+    summary: 'Permanently delete a Course',
+    description:
+      'Completely remove a Course from the database (cannot be restored afterwards).',
+  })
+  @ApiParam({ name: 'id', description: 'ID of the Course', example: 1 })
+  @ApiResponse({
+    status: 200,
+    description: 'Course successfully deleted permanently',
+    type: BaseResponseDto<CourseResponseDto>,
+  })
+  @ApiResponse({ status: 404, description: 'Course not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async hardDeleteCourse(@Param('id', ParseIntPipe) id: number) {
+    return await this.coursesService.hardDeleteCourse(id);
+  }
+}

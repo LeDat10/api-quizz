@@ -1,0 +1,290 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
+import {
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiParam,
+  ApiBody,
+  ApiQuery,
+} from '@nestjs/swagger';
+import { LessonService } from './lesson.service';
+import { UpdateLessonDto } from './dtos/update-lesson.dto';
+import { CreateLessonDto } from './dtos/create-lesson.dto';
+import { LessonResponseDto } from './dtos/lesson-response.dto';
+import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';
+import { PaginationResponse } from 'src/common/pagination/dtos/pagination-response.dto';
+import { BaseResponseDto } from 'src/common/response/dtos/base-response.dto';
+
+@ApiTags('Lessons')
+@Controller('lesson')
+export class LessonController {
+  constructor(private readonly lessonService: LessonService) {}
+
+  @Get()
+  @ApiOperation({
+    summary: 'Get all lessons',
+    description:
+      'Retrieve a paginated list of all lessons sorted by their position.',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    example: 1,
+    description: 'Page number (default: 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    example: 10,
+    description: 'Items per page (default: 10)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of lessons fetched successfully.',
+    type: PaginationResponse<LessonResponseDto>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid query parameters' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async GetAllLessons(@Query() paginationQueryDto: PaginationQueryDto) {
+    return await this.lessonService.getAllLessons(paginationQueryDto);
+  }
+
+  @Get('deleted')
+  @ApiOperation({
+    summary: 'Get deleted lessons',
+    description:
+      'Retrieve a list of lessons that have been soft-deleted (not permanently removed).',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    example: 1,
+    description: 'Page number (default: 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    example: 10,
+    description: 'Items per page (default: 10)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of deleted lessons fetched successfully.',
+    type: PaginationResponse<LessonResponseDto>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid query parameters' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async GetAllLessonsDeleted(
+    @Query() paginationQueryDto: PaginationQueryDto,
+  ) {
+    return await this.lessonService.getAllLessonDeleted(paginationQueryDto);
+  }
+
+  @Patch('restore-multiple')
+  @ApiOperation({
+    summary: 'Restore multiple lessons',
+    description:
+      'Restore multiple lessons that have been soft-deleted using a list of lesson IDs.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'array',
+      items: { type: 'number', example: 1 },
+      example: [1, 2, 3],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lessons restored successfully.',
+    type: BaseResponseDto<LessonResponseDto>,
+  })
+  @ApiResponse({ status: 400, description: 'No lesson IDs provided' })
+  @ApiResponse({ status: 404, description: 'Some or all lesson not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async RestoreLessonMultiple(@Body() ids: number[]) {
+    return await this.lessonService.restoreLessonMultiple(ids);
+  }
+
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Get lesson details by ID',
+    description: 'Retrieve detailed information about a specific lesson.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    example: 1,
+    description: 'Lesson ID to retrieve',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lesson details fetched successfully.',
+    type: BaseResponseDto<LessonResponseDto>,
+  })
+  @ApiResponse({ status: 404, description: 'Lesson not found.' })
+  public async GetLessonDetail(@Param('id', ParseIntPipe) id: number) {
+    return await this.lessonService.getDetailLesson(id);
+  }
+
+  @Post()
+  @ApiOperation({
+    summary: 'Create a new lesson',
+    description: 'Create a new lesson and assign it to an existing chapter.',
+  })
+  @ApiBody({
+    type: CreateLessonDto,
+    examples: {
+      example1: {
+        summary: 'Example payload',
+        value: {
+          title: 'Introduction to React',
+          lessonType: 'video',
+          lessonStatus: 'published',
+          position: 1,
+          chapterId: 2,
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Lesson created successfully.',
+    type: BaseResponseDto<LessonResponseDto>,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input or missing required fields',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Chapter not found (if chapterId is provided)',
+  })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async createLesson(@Body() createLesson: CreateLessonDto) {
+    return await this.lessonService.createLesson(createLesson);
+  }
+
+  @Patch(':id')
+  @ApiOperation({
+    summary: 'Update an existing lesson',
+    description:
+      'Update lesson information such as title, type, status, or position.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    example: 1,
+    description: 'Lesson ID to update',
+  })
+  @ApiBody({
+    type: UpdateLessonDto,
+    examples: {
+      example1: {
+        summary: 'Example payload',
+        value: {
+          title: 'Updated React Basics',
+          lessonStatus: 'draft',
+          chapterId: 3,
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lesson updated successfully.',
+    type: BaseResponseDto<LessonResponseDto>,
+  })
+  @ApiResponse({ status: 404, description: 'Lesson not found.' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async UpdateLesson(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateLessonDto: UpdateLessonDto,
+  ) {
+    return await this.lessonService.updateLesson(id, updateLessonDto);
+  }
+
+  @Patch(':id/restore')
+  @ApiOperation({
+    summary: 'Restore a lesson',
+    description:
+      'Restore a single lesson that has been soft-deleted by its ID.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    example: 5,
+    description: 'Lesson ID to restore',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lesson restored successfully.',
+    type: BaseResponseDto<LessonResponseDto>,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Lesson not found or already active.',
+  })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async Restorelesson(@Param('id', ParseIntPipe) id: number) {
+    return await this.lessonService.restoreLesson(id);
+  }
+
+  @Delete(':id/soft-delete')
+  @ApiOperation({
+    summary: 'Soft delete a lesson',
+    description:
+      'Soft delete a lesson (mark it as deleted without removing it from the database).',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    example: 5,
+    description: 'Lesson ID to soft delete',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lesson soft deleted successfully.',
+    type: BaseResponseDto<LessonResponseDto>,
+  })
+  @ApiResponse({ status: 404, description: 'Lesson not found.' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async SoftDeleteLesson(@Param('id', ParseIntPipe) id: number) {
+    return await this.lessonService.softDeleteLesson(id);
+  }
+
+  @Delete(':id/hard-delete')
+  @ApiOperation({
+    summary: 'Permanently delete a lesson',
+    description:
+      'Permanently remove a lesson from the database (only for soft-deleted lessons).',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    example: 5,
+    description: 'Lesson ID to permanently delete',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lesson permanently deleted successfully.',
+    type: BaseResponseDto<LessonResponseDto>,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Lesson not found or not soft-deleted.',
+  })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async HardDeleteLesson(@Param('id', ParseIntPipe) id: number) {
+    return await this.lessonService.hardDeleteLesson(id);
+  }
+}
