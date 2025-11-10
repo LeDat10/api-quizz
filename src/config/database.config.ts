@@ -8,8 +8,10 @@ export default registerAs('database', () => ({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,
   synchronize: process.env.DB_SYNC,
-  ssl:
-    process.env.DB_SSL === 'true'
-      ? { ca: fs.readFileSync('src/config/global-bundle.pem').toString() }
-      : false,
+  ssl: process.env.DB_SSL,
+  bucket: process.env.PEM_BUCKET || '',
+  key: process.env.PEM_KEY || '',
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+  region: process.env.AWS_REGION || '',
 }));

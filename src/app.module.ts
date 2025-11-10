@@ -21,6 +21,8 @@ import { PdfResource } from './resource/entities/pdf-resource.entity';
 import { AudioResource } from './resource/entities/audio-resource.entity';
 import { VideoResource } from './resource/entities/video-resource.entity';
 import { ResourceLibrary } from './resource-library/resource-library.entity';
+import { PemService } from './common/pem/pem.service';
+import { PemModule } from './common/pem/pem.module';
 
 const ENV = process.env.NODE_ENV;
 
@@ -33,29 +35,41 @@ const ENV = process.env.NODE_ENV;
       load: [databaseConfig],
     }),
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        ssl: configService.get('database.ssl'),
-        synchronize: configService.get<boolean>('database.synchronize'),
-        host: configService.get<string>('database.host'),
-        port: configService.get<number>('database.port'),
-        username: configService.get<string>('database.username'),
-        password: configService.get<string>('database.password'),
-        database: configService.get<string>('database.database'),
-        entities: [
-          Course,
-          Category,
-          Chapter,
-          Lesson,
-          Resource,
-          PdfResource,
-          AudioResource,
-          VideoResource,
-          ResourceLibrary,
-        ],
-      }),
+      imports: [ConfigModule, PemModule],
+      inject: [ConfigService, PemService],
+      useFactory: async (
+        configService: ConfigService,
+        pemService: PemService,
+      ) => {
+        const sslEnabled = configService.get<boolean>('database.ssl');
+        const pem = sslEnabled
+          ? await pemService.getPem(
+              configService.get<string>('database.bucket') || '',
+              configService.get<string>('database.key') || '',
+            )
+          : undefined;
+        return {
+          type: 'postgres',
+          ssl: sslEnabled ? { ca: pem } : false,
+          synchronize: configService.get<boolean>('database.synchronize'),
+          host: configService.get<string>('database.host'),
+          port: configService.get<number>('database.port'),
+          username: configService.get<string>('database.username'),
+          password: configService.get<string>('database.password'),
+          database: configService.get<string>('database.database'),
+          entities: [
+            Course,
+            Category,
+            Chapter,
+            Lesson,
+            Resource,
+            PdfResource,
+            AudioResource,
+            VideoResource,
+            ResourceLibrary,
+          ],
+        };
+      },
     }),
     CategoriesModule,
     ChaptersModule,
@@ -64,6 +78,7 @@ const ENV = process.env.NODE_ENV;
     PaginationModule,
     ResourceModule,
     ResourceLibraryModule,
+    PemModule,
   ],
   controllers: [AppController],
   providers: [AppService],
