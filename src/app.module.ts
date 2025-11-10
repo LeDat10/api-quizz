@@ -22,12 +22,14 @@ import { AudioResource } from './resource/entities/audio-resource.entity';
 import { VideoResource } from './resource/entities/video-resource.entity';
 import { ResourceLibrary } from './resource-library/resource-library.entity';
 
+const ENV = process.env.NODE_ENV;
+
 @Module({
   imports: [
     CoursesModule,
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: !ENV ? '.env' : `.env.${ENV.trim()}`,
       load: [databaseConfig],
     }),
     TypeOrmModule.forRootAsync({
