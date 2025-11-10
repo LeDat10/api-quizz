@@ -1,35 +1,41 @@
-// pem.service.ts
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
-import { Readable } from 'stream';
 import { ConfigService } from '@nestjs/config';
+import { Readable } from 'stream';
 
 @Injectable()
 export class PemService {
-  private s3: S3Client;
+  private s3: S3Client | null = null;
+  private isDev: boolean;
 
-  constructor(private configService: ConfigService) {
-    this.s3 = new S3Client({
-      region: this.configService.get<string>('database.region'),
-      credentials: {
-        accessKeyId:
-          this.configService.get<string>('database.accessKeyId') || '',
-        secretAccessKey:
-          this.configService.get<string>('database.secretAccessKey') || '',
-      },
-    });
+  constructor(private readonly configService: ConfigService) {
+    this.isDev = this.configService.get<string>('NODE_ENV') === 'development';
+
+    if (!this.isDev) {
+      this.s3 = new S3Client({
+        region:
+          this.configService.get<string>('AWS_REGION') || 'ap-southeast-2',
+        credentials: {
+          accessKeyId:
+            this.configService.get<string>('AWS_ACCESS_KEY_ID') || '',
+          secretAccessKey:
+            this.configService.get<string>('AWS_SECRET_ACCESS_KEY') || '',
+        },
+      });
+    }
   }
 
-  async getPem(bucket: string, key: string): Promise<string> {
+  async getPem(bucket: string, key: string): Promise<string | undefined> {
+    if (this.isDev) {
+      return undefined;
+    }
+
     const command = new GetObjectCommand({ Bucket: bucket, Key: key });
-    const data = await this.s3.send(command);
+    const data = await this.s3!.send(command);
 
     const stream = data.Body as Readable;
-    return await new Promise<string>((resolve, reject) => {
-      const chunks: any[] = [];
-      stream.on('data', (chunk) => chunks.push(chunk));
-      stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
-      stream.on('error', reject);
-    });
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(chunk);
+    return Buffer.concat(chunks).toString('utf-8');
   }
 }

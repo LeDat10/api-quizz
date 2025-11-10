@@ -41,7 +41,7 @@ const ENV = process.env.NODE_ENV;
         configService: ConfigService,
         pemService: PemService,
       ) => {
-        const sslEnabled = configService.get<boolean>('database.ssl');
+        const sslEnabled = configService.get<string>('database.ssl') === 'true';
         const pem = sslEnabled
           ? await pemService.getPem(
               configService.get<string>('database.bucket') || '',
