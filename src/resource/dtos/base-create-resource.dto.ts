@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class BaseCreateResourceDto {
   @IsString()
@@ -17,7 +17,7 @@ export class BaseCreateResourceDto {
   @ApiPropertyOptional()
   description?: string;
 
-  @IsNumber()
+  @IsInt()
   @IsOptional()
   @ApiPropertyOptional()
   libraryId?: number;

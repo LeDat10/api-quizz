@@ -1,4 +1,5 @@
 import { registerAs } from '@nestjs/config';
+import * as fs from 'fs';
 
 export default registerAs('database', () => ({
   host: process.env.DB_HOST,
@@ -7,4 +8,8 @@ export default registerAs('database', () => ({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,
   synchronize: process.env.DB_SYNC,
+  ssl:
+    process.env.DB_SSL === 'true'
+      ? { ca: fs.readFileSync('src/config/global-bundle.pem').toString() }
+      : false,
 }));

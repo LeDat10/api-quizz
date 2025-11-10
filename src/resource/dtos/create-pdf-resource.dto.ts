@@ -1,9 +1,9 @@
-import { IsNumber, IsOptional } from 'class-validator';
+import { IsInt, IsNumber, IsOptional } from 'class-validator';
 import { BaseCreateResourceDto } from './base-create-resource.dto';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreatePdfResourceDto extends BaseCreateResourceDto {
-  @IsNumber()
+  @IsInt()
   @IsOptional()
   @ApiPropertyOptional()
   pageCount?: number;

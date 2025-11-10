@@ -17,6 +17,8 @@ import { PaginationProvider } from 'src/common/pagination/pagination.provider';
 import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';
 import { LoggerHelper } from 'src/common/helpers/logger/logger.helper';
 import { ErrorHandlerHelper } from 'src/common/helpers/error/handle-error.helper';
+import { ChangeCourseStatusDto } from './dtos/change-course-status.dto';
+import { ChangeCoursePositionDto } from './dtos/change-course-position.dto';
 
 @Injectable()
 export class CoursesService {
@@ -473,6 +475,101 @@ export class CoursesService {
       return ResponseFactory.success<CourseResponseDto[]>(
         `${courses.length} courses restored successfully`,
         coursesResponse,
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async changeCourseStatusMultiple(
+    changeCourseStatusDto: ChangeCourseStatusDto,
+  ) {
+    const ctx = {
+      method: 'changeCourseStatusMultiple',
+      entity: this._entity,
+    };
+    this.logger.start(ctx);
+    try {
+      const { ids, status } = changeCourseStatusDto;
+      this.logger.debug(
+        ctx,
+        'start',
+        `Updating status for courses with IDs: ${ids.join(', ')}, new status: ${status}`,
+      );
+
+      const courses = await this.coursesRepository.find({
+        where: { id: In(ids) },
+        relations: ['category'],
+      });
+
+      if (!courses.length) {
+        const reason = `No courses found with IDs: ${ids.join(', ')}`;
+        this.logger.warn(ctx, 'failed', reason);
+        throw new NotFoundException(reason);
+      }
+
+      for (const course of courses) {
+        course.status = status;
+      }
+
+      const records = await this.coursesRepository.save(courses);
+      this.logger.success(ctx, 'updated');
+      return ResponseFactory.success<CourseResponseDto[]>(
+        `Updated status for ${records.length} courses`,
+        CourseResponseDto.fromEntities(records),
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async changeCoursePositionMultiple(
+    changeCoursePositionDtos: ChangeCoursePositionDto[],
+  ) {
+    const ctx = {
+      method: 'changeCoursePositionMultiple',
+      entity: this._entity,
+    };
+
+    try {
+      if (!changeCoursePositionDtos.length) {
+        const reason = 'No courses provided';
+        this.logger.warn(ctx, 'failed', reason);
+        throw new BadRequestException(
+          generateMessage('updated', this._entity, undefined, reason),
+        );
+      }
+
+      const ids = changeCoursePositionDtos.map((d) => d.id);
+      this.logger.debug(
+        ctx,
+        'start',
+        `Updating positions for courses with IDs: ${ids.join(', ')}`,
+      );
+
+      const courses = await this.coursesRepository.find({
+        where: { id: In(ids) },
+        relations: ['category'],
+      });
+
+      if (!courses.length) {
+        const reason = `No courses found with IDs: ${ids.join(', ')}`;
+        this.logger.warn(ctx, 'failed', reason);
+        throw new NotFoundException(reason);
+      }
+
+      for (const course of courses) {
+        const dto = changeCoursePositionDtos.find((d) => d.id === course.id);
+        if (dto) {
+          course.position = dto.position;
+        }
+      }
+
+      const records = await this.coursesRepository.save(courses);
+      this.logger.success(ctx, 'updated');
+      return ResponseFactory.success<CourseResponseDto[]>(
+        `Updated positions for ${records.length} courses`,
+        CourseResponseDto.fromEntities(records),
       );
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity);

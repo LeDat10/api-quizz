@@ -25,6 +25,7 @@ import { PdfResourceResponseDto } from './dtos/pdf-resource-response.dto';
 import { ResourceResponseDto } from './dtos/resource-response.dto';
 import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';
 import { PaginationResponse } from 'src/common/pagination/dtos/pagination-response.dto';
+import { ChangeResourcePositionDto } from './dtos/change-resource-position.dto';
 
 @ApiTags('Resources')
 @Controller('resource')
@@ -255,5 +256,23 @@ export class ResourceController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   public async RestoreResourceMultiple(@Body() ids: number[]) {
     return await this.resourceService.restorePdfResourceMultiple(ids);
+  }
+
+  @Patch('change-status')
+  @ApiOperation({ summary: 'Change position for multiple resources' })
+  @ApiBody({ type: ChangeResourcePositionDto, isArray: true })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated resource positions',
+    type: BaseResponseDto<ResourceResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async ChangeResourcePositionMultiple(
+    changeResourcePositionDtos: ChangeResourcePositionDto[],
+  ) {
+    return await this.resourceService.changeResourcePositionMultiple(
+      changeResourcePositionDtos,
+    );
   }
 }

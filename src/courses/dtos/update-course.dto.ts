@@ -1,9 +1,7 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateCourseDto } from './create-course.dto';
 import {
   IsEnum,
+  IsInt,
   IsNotEmpty,
-  IsNumber,
   IsOptional,
   IsString,
 } from 'class-validator';
@@ -35,12 +33,12 @@ export class UpdateCourseDto {
   @ApiPropertyOptional()
   status?: CourseStatus;
 
-  @IsNumber()
+  @IsInt()
   @IsOptional()
   @ApiPropertyOptional()
   position?: number;
 
-  @IsNumber()
+  @IsInt()
   @IsOptional()
   @ApiPropertyOptional()
   categoryId?: number;

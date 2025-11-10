@@ -24,6 +24,8 @@ import { LessonResponseDto } from './dtos/lesson-response.dto';
 import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';
 import { PaginationResponse } from 'src/common/pagination/dtos/pagination-response.dto';
 import { BaseResponseDto } from 'src/common/response/dtos/base-response.dto';
+import { ChangeLessonStatusDto } from './dtos/change-lesson-status.dto';
+import { ChangeLessonPositionDto } from './dtos/change-lesson-position.dto';
 
 @ApiTags('Lessons')
 @Controller('lesson')
@@ -237,6 +239,42 @@ export class LessonController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   public async Restorelesson(@Param('id', ParseIntPipe) id: number) {
     return await this.lessonService.restoreLesson(id);
+  }
+
+  @Patch('change-status')
+  @ApiOperation({ summary: 'Change status for multiple lessons' })
+  @ApiBody({ type: ChangeLessonStatusDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated lesson statuses',
+    type: BaseResponseDto<LessonResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async changeLessonStatusMultiple(
+    @Body() changeLessonStatusDto: ChangeLessonStatusDto,
+  ) {
+    return await this.lessonService.changeLessonStatusMultiple(
+      changeLessonStatusDto,
+    );
+  }
+
+  @Patch('change-position')
+  @ApiOperation({ summary: 'Change position for multiple lessons' })
+  @ApiBody({ type: ChangeLessonPositionDto, isArray: true })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated lesson positions',
+    type: BaseResponseDto<LessonResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async changeLessonPositionMultiple(
+    @Body() changeLessonPositionDto: ChangeLessonPositionDto[],
+  ) {
+    return await this.lessonService.changeLessonPositionMultiple(
+      changeLessonPositionDto,
+    );
   }
 
   @Delete(':id/soft-delete')

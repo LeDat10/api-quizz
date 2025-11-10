@@ -15,19 +15,17 @@ import { UpdateChapterDto } from './dtos/update-chapter.dto';
 import { ChapterResponseDto } from './dtos/chapter-response.dto';
 import {
   ApiBody,
-  ApiInternalServerErrorResponse,
-  ApiNotFoundResponse,
-  ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiQuery,
   ApiResponse,
-  ApiServiceUnavailableResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';
 import { PaginationResponse } from 'src/common/pagination/dtos/pagination-response.dto';
 import { BaseResponseDto } from 'src/common/response/dtos/base-response.dto';
+import { ChangeChapterStatusDto } from './dtos/change-chapter-status.dto';
+import { ChangeChapterPositionDto } from './dtos/change-chapter-position.dto';
 
 @ApiTags('Chapters')
 @Controller('chapters')
@@ -208,6 +206,43 @@ export class ChaptersController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   public async RestoreChapterMultiple(@Body() ids: number[]) {
     return this.chaptersService.restoreChapterMultiple(ids);
+  }
+
+  @Patch('change-status')
+  @ApiOperation({ summary: 'Change status for multiple chapters' })
+  @ApiBody({ type: ChangeChapterStatusDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated lesson statuses',
+    type: BaseResponseDto<ChapterResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async ChangeChapterStatusMultiple(
+    changeChapterStatusDto: ChangeChapterStatusDto,
+  ) {
+    return await this.chaptersService.changeChapterStatusMultiple(
+      changeChapterStatusDto,
+    );
+  }
+
+  @Patch('change-position')
+  @ApiOperation({ summary: 'Change position for multiple chapters' })
+  @ApiBody({ type: ChangeChapterPositionDto, isArray: true })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated chapter positions',
+    type: BaseResponseDto<ChapterResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async changeChapterPositionMultiple(
+    @Body()
+    changeChapterPositionDtos: ChangeChapterPositionDto[],
+  ) {
+    return await this.chaptersService.changeChapterPositionMultiple(
+      changeChapterPositionDtos,
+    );
   }
 
   @Delete(':id/soft-delete')

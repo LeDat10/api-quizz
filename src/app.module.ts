@@ -35,6 +35,7 @@ import { ResourceLibrary } from './resource-library/resource-library.entity';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
+        ssl: configService.get('database.ssl'),
         synchronize: configService.get<boolean>('database.synchronize'),
         host: configService.get<string>('database.host'),
         port: configService.get<number>('database.port'),

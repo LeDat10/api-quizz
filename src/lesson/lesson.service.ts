@@ -17,6 +17,8 @@ import { PaginationProvider } from 'src/common/pagination/pagination.provider';
 import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';
 import { LoggerHelper } from 'src/common/helpers/logger/logger.helper';
 import { ErrorHandlerHelper } from 'src/common/helpers/error/handle-error.helper';
+import { ChangeLessonStatusDto } from './dtos/change-lesson-status.dto';
+import { ChangeLessonPositionDto } from './dtos/change-lesson-position.dto';
 
 @Injectable()
 export class LessonService {
@@ -454,6 +456,97 @@ export class LessonService {
       return ResponseFactory.success<LessonResponseDto[]>(
         `${lessons.length} lessons restored successfully`,
         lessonsResponse,
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async changeLessonStatusMultiple(
+    changeLessonStatusDto: ChangeLessonStatusDto,
+  ) {
+    const ctx = { method: 'changeLessonStatusMultiple', entity: this._entity };
+    this.logger.start(ctx);
+    try {
+      const { ids, status } = changeLessonStatusDto;
+      this.logger.debug(
+        ctx,
+        'start',
+        `Updating status for lessons with IDs: ${ids.join(', ')}, new status: ${status}`,
+      );
+
+      const lessons = await this.lessonRepository.find({
+        where: { id: In(ids) },
+        relations: ['chapter'],
+      });
+
+      if (!lessons.length) {
+        const reason = `No lessons found with IDs: ${ids.join(', ')}`;
+        this.logger.warn(ctx, 'failed', reason);
+        throw new NotFoundException(reason);
+      }
+
+      for (const lesson of lessons) {
+        lesson.lessonStatus = status;
+      }
+
+      const records = await this.lessonRepository.save(lessons);
+      this.logger.success(ctx, 'updated');
+      return ResponseFactory.success<LessonResponseDto[]>(
+        generateMessage('updated', this._entity),
+        LessonResponseDto.fromEntities(records),
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async changeLessonPositionMultiple(
+    changLessonPositionDtos: ChangeLessonPositionDto[],
+  ) {
+    const ctx = {
+      method: 'changelessonPositionMultiple',
+      entity: this._entity,
+    };
+    this.logger.start(ctx);
+    try {
+      if (!changLessonPositionDtos.length) {
+        const reason = 'No lessons provided';
+        this.logger.warn(ctx, 'failed', reason);
+        throw new BadRequestException(
+          generateMessage('updated', this._entity, undefined, reason),
+        );
+      }
+
+      const ids = changLessonPositionDtos.map((d) => d.id);
+      this.logger.debug(
+        ctx,
+        'start',
+        `Updating positions for lessons with IDs: ${ids.join(', ')}`,
+      );
+      const lessons = await this.lessonRepository.find({
+        where: { id: In(ids) },
+        relations: ['chapter'],
+      });
+
+      if (!lessons.length) {
+        const reason = `No lessons found with IDs: ${ids.join(', ')}`;
+        this.logger.warn(ctx, 'failed', reason);
+        throw new NotFoundException(reason);
+      }
+
+      for (const lesson of lessons) {
+        const dto = changLessonPositionDtos.find((d) => d.id === lesson.id);
+        if (dto) {
+          lesson.position = dto.position;
+        }
+      }
+
+      const records = await this.lessonRepository.save(lessons);
+      this.logger.success(ctx, 'updated');
+      return ResponseFactory.success<LessonResponseDto[]>(
+        `Updated positions for ${records.length} lessons`,
+        LessonResponseDto.fromEntities(records),
       );
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity);

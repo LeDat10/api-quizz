@@ -24,6 +24,8 @@ import { CourseResponseDto } from './dtos/course-response.dto';
 import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';
 import { PaginationResponse } from 'src/common/pagination/dtos/pagination-response.dto';
 import { BaseResponseDto } from 'src/common/response/dtos/base-response.dto';
+import { ChangeCourseStatusDto } from './dtos/change-course-status.dto';
+import { ChangeCoursePositionDto } from './dtos/change-course-position.dto';
 
 @ApiTags('Courses')
 @Controller('courses')
@@ -204,6 +206,42 @@ export class CoursesController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   public async restoreCourseMultiple(@Body() ids: number[]) {
     return this.coursesService.restoreCourseMultiple(ids);
+  }
+
+  @Patch('change-status')
+  @ApiOperation({ summary: 'Change status for multiple courses' })
+  @ApiBody({ type: ChangeCourseStatusDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated course statuses',
+    type: BaseResponseDto<CourseResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async ChangeCourseStatusMultiple(
+    changeCourseStatusDto: ChangeCourseStatusDto,
+  ) {
+    return await this.coursesService.changeCourseStatusMultiple(
+      changeCourseStatusDto,
+    );
+  }
+
+  @Patch('change-position')
+  @ApiOperation({ summary: 'Change position for multiple courses' })
+  @ApiBody({ type: ChangeCoursePositionDto, isArray: true })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated course positions',
+    type: BaseResponseDto<CourseResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async ChangeCoursePositionMulitple(
+    changeCoursePositionDtos: ChangeCoursePositionDto[],
+  ) {
+    return await this.coursesService.changeCoursePositionMultiple(
+      changeCoursePositionDtos,
+    );
   }
 
   @Delete(':id/soft-delete')

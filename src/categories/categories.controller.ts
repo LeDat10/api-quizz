@@ -23,6 +23,8 @@ import { CategoryResponseDto } from './dtos/category-response.dto';
 import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';
 import { BaseResponseDto } from 'src/common/response/dtos/base-response.dto';
 import { PaginationResponse } from 'src/common/pagination/dtos/pagination-response.dto';
+import { ChangeCategoryStatusDto } from './dtos/change-category-status.dto';
+import { ChangeCategoryPositionDto } from './dtos/change-category-position.dto';
 
 @Controller('categories')
 export class CategoriesController {
@@ -210,6 +212,42 @@ export class CategoriesController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   public async RestoreCategoryMultiple(@Body() ids: number[]) {
     return await this.cateogriesService.restoreCategoryMultiple(ids);
+  }
+
+  @Patch('change-status')
+  @ApiOperation({ summary: 'Change status for multiple lessons' })
+  @ApiBody({ type: ChangeCategoryStatusDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated lesson statuses',
+    type: BaseResponseDto<CategoryResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async ChangeCategoryStatusMultiple(
+    changeCategoryStatusDto: ChangeCategoryStatusDto,
+  ) {
+    return await this.cateogriesService.changeCategoryStatusMultiple(
+      changeCategoryStatusDto,
+    );
+  }
+
+  @Patch('change-position')
+  @ApiOperation({ summary: 'Change position for multiple lessons' })
+  @ApiBody({ type: ChangeCategoryPositionDto, isArray: true })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated lesson positions',
+    type: BaseResponseDto<CategoryResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async ChangeCategoryPositionMultiple(
+    changeCategoryPositionDtos: ChangeCategoryPositionDto[],
+  ) {
+    return await this.cateogriesService.changeCategoryPositionMultiple(
+      changeCategoryPositionDtos,
+    );
   }
 
   @Delete(':id/soft-delete')

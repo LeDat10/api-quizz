@@ -1,7 +1,7 @@
 import {
   IsEnum,
+  IsInt,
   IsNotEmpty,
-  IsNumber,
   IsOptional,
   IsString,
 } from 'class-validator';
@@ -32,12 +32,12 @@ export class CreateCourseDto {
   @ApiPropertyOptional()
   status?: CourseStatus;
 
-  @IsNumber()
+  @IsInt()
   @IsOptional()
   @ApiPropertyOptional()
   position?: number;
 
-  @IsNumber()
+  @IsInt()
   @IsOptional()
   @ApiPropertyOptional()
   categoryId?: number;

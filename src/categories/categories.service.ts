@@ -16,6 +16,8 @@ import { ResponseFactory } from 'src/common/response/factories/response.factory'
 import { LoggerHelper } from 'src/common/helpers/logger/logger.helper';
 import { generateMessage } from 'src/common/utils/generateMessage.util';
 import { ErrorHandlerHelper } from 'src/common/helpers/error/handle-error.helper';
+import { ChangeCategoryStatusDto } from './dtos/change-category-status.dto';
+import { ChangeCategoryPositionDto } from './dtos/change-category-position.dto';
 
 @Injectable()
 export class CategoriesService {
@@ -434,6 +436,96 @@ export class CategoriesService {
       return ResponseFactory.success<CategoryResponseDto[]>(
         `${categories.length} categories restored successfully`,
         categoriesResponse,
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async changeCategoryStatusMultiple(
+    changeCategoryStatusDto: ChangeCategoryStatusDto,
+  ) {
+    const ctx = {
+      method: 'changeCategoryStatusMultiple',
+      entity: this._entity,
+    };
+    this.logger.start(ctx);
+    try {
+      const { ids, status } = changeCategoryStatusDto;
+      const categories = await this.categoryRepository.find({
+        where: { id: In(ids) },
+      });
+
+      if (!categories.length) {
+        const reason = `No categories found with IDs: ${ids.join(', ')}`;
+        this.logger.warn(ctx, 'failed', reason);
+        throw new NotFoundException(reason);
+      }
+
+      for (const category of categories) {
+        category.status = status;
+      }
+
+      const records = await this.categoryRepository.save(categories);
+      this.logger.success(ctx, 'updated');
+
+      return ResponseFactory.success<CategoryResponseDto[]>(
+        generateMessage('updated', this._entity),
+        CategoryResponseDto.fromEntities(records),
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async changeCategoryPositionMultiple(
+    changeCategoryPositionDtos: ChangeCategoryPositionDto[],
+  ) {
+    const ctx = {
+      method: 'changeCategoryPositionMultiple',
+      entity: this._entity,
+    };
+    this.logger.start(ctx);
+    try {
+      if (!changeCategoryPositionDtos.length) {
+        const reason = 'No categories provided';
+        this.logger.warn(ctx, 'failed', reason);
+        throw new BadRequestException(
+          generateMessage('updated', this._entity, undefined, reason),
+        );
+      }
+
+      const ids = changeCategoryPositionDtos.map((d) => d.id);
+      this.logger.debug(
+        ctx,
+        'start',
+        `Updating positions for categories with IDs: ${ids.join(', ')}`,
+      );
+
+      const categories = await this.categoryRepository.find({
+        where: { id: In(ids) },
+      });
+
+      if (!categories.length) {
+        const reason = `No categories found with IDs: ${ids.join(', ')}`;
+        this.logger.warn(ctx, 'failed', reason);
+        throw new NotFoundException(reason);
+      }
+
+      for (const category of categories) {
+        const dto = changeCategoryPositionDtos.find(
+          (d) => d.id === category.id,
+        );
+
+        if (dto) {
+          category.position = dto.position;
+        }
+      }
+
+      const records = await this.categoryRepository.save(categories);
+      return ResponseFactory.success<CategoryResponseDto[]>(
+        generateMessage('updated', this._entity),
+        CategoryResponseDto.fromEntities(records),
       );
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity);

@@ -1,5 +1,6 @@
 import {
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -40,7 +41,7 @@ export class CreateLessonDto {
     example: 2,
     description: 'Position/order of the lesson within the chapter (optional)',
   })
-  @IsNumber()
+  @IsInt()
   @IsOptional()
   position?: number;
 
@@ -48,7 +49,7 @@ export class CreateLessonDto {
     example: 5,
     description: 'Identifier of the chapter to which this lesson belongs',
   })
-  @IsNumber()
+  @IsInt()
   @IsNotEmpty()
   chapterId: number;
 }

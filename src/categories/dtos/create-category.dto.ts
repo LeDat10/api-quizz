@@ -1,7 +1,7 @@
 import {
   IsEnum,
+  IsInt,
   IsNotEmpty,
-  IsNumber,
   IsOptional,
   IsString,
 } from 'class-validator';
@@ -29,7 +29,7 @@ export class CreateCategoryDto {
   @IsOptional()
   status?: CategoryStatus;
 
-  @IsNumber()
+  @IsInt()
   @IsOptional()
   @ApiProperty()
   position?: number;

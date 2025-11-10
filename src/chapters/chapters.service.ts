@@ -17,6 +17,8 @@ import { ResponseFactory } from 'src/common/response/factories/response.factory'
 import { generateMessage } from 'src/common/utils/generateMessage.util';
 import { LoggerHelper } from 'src/common/helpers/logger/logger.helper';
 import { ErrorHandlerHelper } from 'src/common/helpers/error/handle-error.helper';
+import { ChangeChapterStatusDto } from './dtos/change-chapter-status.dto';
+import { ChangeChapterPositionDto } from './dtos/change-chapter-position.dto';
 
 @Injectable()
 export class ChaptersService {
@@ -471,6 +473,92 @@ export class ChaptersService {
       return ResponseFactory.success<ChapterResponseDto[]>(
         `${chapters.length} chapters restored successfully`,
         chaptersResponse,
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async changeChapterStatusMultiple(
+    changeChapterStatusDto: ChangeChapterStatusDto,
+  ) {
+    const ctx = { method: 'changeChapterStatusMultiple', entity: this._entity };
+    this.logger.start(ctx);
+    try {
+      const { ids, status } = changeChapterStatusDto;
+      const chapters = await this.chapterRepository.find({
+        where: { id: In(ids) },
+        relations: ['course'],
+      });
+
+      if (!chapters.length) {
+        const reason = `No chapters found with IDs: ${ids.join(', ')}`;
+        this.logger.warn(ctx, 'failed', reason);
+        throw new NotFoundException(reason);
+      }
+
+      for (const chapter of chapters) {
+        chapter.status = status;
+      }
+
+      const records = await this.chapterRepository.save(chapters);
+      this.logger.success(ctx, 'updated');
+      return ResponseFactory.success<ChapterResponseDto[]>(
+        generateMessage('updated', this._entity),
+        ChapterResponseDto.fromEntities(records),
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async changeChapterPositionMultiple(
+    changeChapterPositionDtos: ChangeChapterPositionDto[],
+  ) {
+    const ctx = {
+      method: 'changeChapterPositionMultiple',
+      entity: this._entity,
+    };
+    this.logger.start(ctx);
+    try {
+      if (!changeChapterPositionDtos.length) {
+        const reason = 'No chapters provided';
+        this.logger.warn(ctx, 'failed', reason);
+        throw new BadRequestException(
+          generateMessage('updated', this._entity, undefined, reason),
+        );
+      }
+
+      const ids = changeChapterPositionDtos.map((d) => d.id);
+      this.logger.debug(
+        ctx,
+        'start',
+        `Updating positions for chapters with IDs: ${ids.join(', ')}`,
+      );
+      const chapters = await this.chapterRepository.find({
+        where: { id: In(ids) },
+        relations: ['course'],
+      });
+
+      if (!chapters.length) {
+        const reason = `No chapters found with IDs: ${ids.join(', ')}`;
+        this.logger.warn(ctx, 'failed', reason);
+        throw new NotFoundException(reason);
+      }
+
+      for (const chapter of chapters) {
+        const dto = changeChapterPositionDtos.find((d) => d.id === chapter.id);
+
+        if (dto) {
+          chapter.position = dto.position;
+        }
+      }
+
+      const records = await this.chapterRepository.save(chapters);
+      this.logger.success(ctx, 'updated');
+      return ResponseFactory.success<ChapterResponseDto[]>(
+        generateMessage('updated', this._entity),
+        ChapterResponseDto.fromEntities(records),
       );
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity);

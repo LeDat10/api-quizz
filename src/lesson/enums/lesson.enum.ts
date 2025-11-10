@@ -11,3 +11,11 @@ export enum LessonStatus {
   INACTIVE = 'inactive', // bị ẩn tạm thời
   ARCHIVED = 'archived', // đã kết thúc hoặc ngừng hoạt động
 }
+
+export enum LessonKeys {
+  DRAFT = 'draft',
+  PUBLISHED = 'published',
+  INACTIVE = 'inactive',
+  ARCHIVED = 'archived',
+  POSITION = 'position',
+}

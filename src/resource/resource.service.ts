@@ -23,6 +23,7 @@ import { BaseUpdateResourceDto } from './dtos/base-update-resource.dto';
 import { PaginationProvider } from 'src/common/pagination/pagination.provider';
 import { ResourceResponseDto } from './dtos/resource-response.dto';
 import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';
+import { ChangeResourcePositionDto } from './dtos/change-resource-position.dto';
 
 @Injectable()
 export class ResourceService {
@@ -591,5 +592,61 @@ export class ResourceService {
       generateMessage('fetched', this._entity, id),
       PdfResourceResponseDto.fromEntity(record),
     );
+  }
+
+  public async changeResourcePositionMultiple(
+    changeResourcePositionDtos: ChangeResourcePositionDto[],
+  ) {
+    const ctx = {
+      method: 'changeResourcePositionMultiple',
+      entity: this._entity,
+    };
+    this.logger.start(ctx);
+
+    try {
+      if (!changeResourcePositionDtos.length) {
+        const reason = 'No resources provided';
+        this.logger.warn(ctx, 'failed', reason);
+        throw new BadRequestException(
+          generateMessage('updated', this._entity, undefined, reason),
+        );
+      }
+
+      const ids = changeResourcePositionDtos.map((d) => d.id);
+      this.logger.debug(
+        ctx,
+        'start',
+        `Updating positions for resources with IDs: ${ids.join(', ')}`,
+      );
+      const resources = await this.resourceRepository.find({
+        where: { id: In(ids) },
+        relations: ['library'],
+      });
+
+      if (!resources.length) {
+        const reason = `No resources found with IDs: ${ids.join(', ')}`;
+        this.logger.warn(ctx, 'failed', reason);
+        throw new NotFoundException(reason);
+      }
+
+      for (const resource of resources) {
+        const dto = changeResourcePositionDtos.find(
+          (d) => d.id === resource.id,
+        );
+
+        if (dto) {
+          resource.position = dto.position;
+        }
+      }
+
+      const records = await this.resourceRepository.save(resources);
+      const responseData = records.map(this.transform);
+      return ResponseFactory.success<ResourceResponseDto[]>(
+        `Updated positions for ${records.length} resources`,
+        responseData,
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
   }
 }

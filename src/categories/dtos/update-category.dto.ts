@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
 import { CategoryStatus } from '../enums/category-status.enum';
 
 export class UpdateCategoryDto {
@@ -23,7 +23,7 @@ export class UpdateCategoryDto {
   @IsOptional()
   status?: CategoryStatus;
 
-  @IsNumber()
+  @IsInt()
   @IsOptional()
   @ApiPropertyOptional()
   position?: number;
