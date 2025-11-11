@@ -189,7 +189,9 @@ export class CategoriesService {
       }
 
       Object.assign(category, updateData);
-      const updatedCategory = await this.categoryRepository.save(category);
+      await this.categoryRepository.save(category);
+
+      const updatedCategory = await this.findCategoryById(id);
       const updatedCategoryResponse =
         CategoryResponseDto.fromEntity(updatedCategory);
 
@@ -466,7 +468,10 @@ export class CategoriesService {
         category.status = status;
       }
 
-      const records = await this.categoryRepository.save(categories);
+      await this.categoryRepository.save(categories);
+      const records = await this.categoryRepository.find({
+        where: { id: In(ids) },
+      });
       this.logger.success(ctx, 'updated');
 
       return ResponseFactory.success<CategoryResponseDto[]>(
@@ -522,7 +527,10 @@ export class CategoriesService {
         }
       }
 
-      const records = await this.categoryRepository.save(categories);
+      await this.categoryRepository.save(categories);
+      const records = await this.categoryRepository.find({
+        where: { id: In(ids) },
+      });
       this.logger.success(ctx, 'updated');
       return ResponseFactory.success<CategoryResponseDto[]>(
         generateMessage('updated', this._entity),

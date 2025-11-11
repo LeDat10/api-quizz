@@ -272,8 +272,9 @@ export class ResourceService {
           }
 
           Object.assign(resource, updateResourceDto);
-          const resourceUpdated =
-            await this.pdfResourceRepository.save(resource);
+
+          await this.pdfResourceRepository.save(resource);
+          const resourceUpdated = await this.findResourceById(id, type);
           this.logger.success(ctx, 'updated');
           return resourceUpdated;
         default:
@@ -639,7 +640,11 @@ export class ResourceService {
         }
       }
 
-      const records = await this.resourceRepository.save(resources);
+      await this.resourceRepository.save(resources);
+      const records = await this.resourceRepository.find({
+        where: { id: In(ids) },
+        relations: ['library'],
+      });
       const responseData = records.map(this.transform);
       return ResponseFactory.success<ResourceResponseDto[]>(
         `Updated positions for ${records.length} resources`,

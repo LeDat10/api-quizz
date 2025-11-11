@@ -256,7 +256,8 @@ export class LessonService {
       }
 
       Object.assign(lesson, updateLessonDto);
-      const lessonUpdated = await this.lessonRepository.save(lesson);
+      await this.lessonRepository.save(lesson);
+      const lessonUpdated = await this.findLessonById(id);
       const lessonUpdatedResponse = LessonResponseDto.fromEntity(lessonUpdated);
 
       this.logger.success(ctx, 'updated');
@@ -490,7 +491,11 @@ export class LessonService {
         lesson.lessonStatus = status;
       }
 
-      const records = await this.lessonRepository.save(lessons);
+      await this.lessonRepository.save(lessons);
+      const records = await this.lessonRepository.find({
+        where: { id: In(ids) },
+        relations: ['chapter'],
+      });
       this.logger.success(ctx, 'updated');
       return ResponseFactory.success<LessonResponseDto[]>(
         generateMessage('updated', this._entity),
@@ -542,7 +547,11 @@ export class LessonService {
         }
       }
 
-      const records = await this.lessonRepository.save(lessons);
+      await this.lessonRepository.save(lessons);
+      const records = await this.lessonRepository.find({
+        where: { id: In(ids) },
+        relations: ['chapter'],
+      });
       this.logger.success(ctx, 'updated');
       return ResponseFactory.success<LessonResponseDto[]>(
         `Updated positions for ${records.length} lessons`,

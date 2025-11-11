@@ -175,7 +175,6 @@ export class ResourceLibraryService {
     this.logger.start(ctx);
 
     try {
-      console.log(updateLibraryDto);
       if (!id) {
         const reason = 'Missing parameter id';
         this.logger.warn(ctx, 'failed', reason);
@@ -206,7 +205,8 @@ export class ResourceLibraryService {
       }
 
       Object.assign(library, updateLibraryDto);
-      const record = await this.resourceLibraryRepository.save(library);
+      await this.resourceLibraryRepository.save(library);
+      const record = await this.findResourceLibraryById(id);
       this.logger.success(ctx, 'updated');
       return ResponseFactory.success<ResourceLibraryResponseDto>(
         generateMessage('updated', this._entity, id),
@@ -453,8 +453,10 @@ export class ResourceLibraryService {
         }
       }
 
-      const recordsSaved = await this.resourceLibraryRepository.save(records);
-
+      await this.resourceLibraryRepository.save(records);
+      const recordsSaved = await this.resourceLibraryRepository.find({
+        where: { id: In(ids) },
+      });
       this.logger.success(ctx, 'updated');
       return ResponseFactory.success<ResourceLibraryResponseDto[]>(
         generateMessage('updated', this._entity),

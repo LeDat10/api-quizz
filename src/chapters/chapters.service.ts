@@ -249,7 +249,8 @@ export class ChaptersService {
       }
 
       Object.assign(chapter, updateChapterDto);
-      const chapterUpdated = await this.chapterRepository.save(chapter);
+      await this.chapterRepository.save(chapter);
+      const chapterUpdated = await this.findChapterById(id);
       const chapterUpdatedResponse =
         ChapterResponseDto.fromEntity(chapterUpdated);
 
@@ -501,7 +502,11 @@ export class ChaptersService {
         chapter.status = status;
       }
 
-      const records = await this.chapterRepository.save(chapters);
+      await this.chapterRepository.save(chapters);
+      const records = await this.chapterRepository.find({
+        where: { id: In(ids) },
+        relations: ['course'],
+      });
       this.logger.success(ctx, 'updated');
       return ResponseFactory.success<ChapterResponseDto[]>(
         generateMessage('updated', this._entity),
@@ -554,7 +559,11 @@ export class ChaptersService {
         }
       }
 
-      const records = await this.chapterRepository.save(chapters);
+      await this.chapterRepository.save(chapters);
+      const records = await this.chapterRepository.find({
+        where: { id: In(ids) },
+        relations: ['course'],
+      });
       this.logger.success(ctx, 'updated');
       return ResponseFactory.success<ChapterResponseDto[]>(
         generateMessage('updated', this._entity),
