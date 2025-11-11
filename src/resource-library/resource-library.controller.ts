@@ -24,6 +24,7 @@ import { BaseResponseDto } from 'src/common/response/dtos/base-response.dto';
 import { CreateResourceLibraryDto } from './dtos/create-resource-library.dto';
 import { UpdateResourceLibraryDto } from './dtos/update-resource-library.dto';
 import { ChangeResourceLibraryPositionDto } from './dtos/change-resource-library-position.dto';
+import { ChangeResourceLibraryStatusDto } from './dtos/change-resource-library-status.dto';
 
 @Controller('resource-library')
 export class ResourceLibraryController {
@@ -81,6 +82,24 @@ export class ResourceLibraryController {
   ) {
     return await this.resourceLibraryService.getAllLibraryDeleted(
       paginationQueryDto,
+    );
+  }
+
+  @Patch('status-multiple')
+  @ApiOperation({ summary: 'Change status for multiple resources library' })
+  @ApiBody({ type: ChangeResourceLibraryStatusDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated resource library statuses',
+    type: BaseResponseDto<ResourceLibraryResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async ChangeLibraryStatusMultiple(
+    @Body() changeLibraryStatusDto: ChangeResourceLibraryStatusDto,
+  ) {
+    return await this.resourceLibraryService.changeLibraryStatusMultiple(
+      changeLibraryStatusDto,
     );
   }
 

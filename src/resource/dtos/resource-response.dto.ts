@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ResourceType } from '../enums/resource-type.enum';
+import { ResourceStatus, ResourceType } from '../enums/resource-type.enum';
 import { Resource } from '../entities/resource.entity';
 
 export class ResourceResponseDto {
@@ -10,6 +10,7 @@ export class ResourceResponseDto {
     this.slug = entity.slug;
     this.position = entity.position;
     this.resourceType = entity.resourceType;
+    this.status = entity.status;
     this.libraryId = entity.library?.id;
     this.createdAt = entity.createdAt;
     this.updatedAt = entity.updatedAt;
@@ -22,6 +23,7 @@ export class ResourceResponseDto {
   @ApiProperty() slug: string;
   @ApiProperty() position: number;
   @ApiProperty({ enum: ResourceType }) resourceType: ResourceType;
+  @ApiProperty({ enum: ResourceStatus }) status: ResourceStatus;
   @ApiProperty() libraryId: number;
   @ApiProperty() createdAt: Date;
   @ApiProperty() updatedAt: Date;

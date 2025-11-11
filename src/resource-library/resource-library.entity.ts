@@ -8,6 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { LibraryStatus } from './enums/resource-library.enum';
 
 @Entity()
 export class ResourceLibrary {
@@ -28,6 +29,13 @@ export class ResourceLibrary {
     nullable: false,
   })
   position: number;
+
+  @Column({
+    type: 'enum',
+    enum: LibraryStatus,
+    default: LibraryStatus.DRAFT,
+  })
+  status: LibraryStatus;
 
   @Column({
     nullable: false,

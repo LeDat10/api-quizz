@@ -17,6 +17,7 @@ import { CreateResourceLibraryDto } from './dtos/create-resource-library.dto';
 import { generateRadomString, generateSlug } from 'src/common/utils/slug.util';
 import { UpdateResourceLibraryDto } from './dtos/update-resource-library.dto';
 import { ChangeResourceLibraryPositionDto } from './dtos/change-resource-library-position.dto';
+import { ChangeResourceLibraryStatusDto } from './dtos/change-resource-library-status.dto';
 
 @Injectable()
 export class ResourceLibraryService {
@@ -32,6 +33,7 @@ export class ResourceLibraryService {
     description: entity.description,
     position: entity.position,
     slug: entity.slug,
+    status: entity.status,
     createdAt: entity.createdAt,
     updatedAt: entity.updatedAt,
     deletedAt: entity.createdAt,
@@ -461,6 +463,50 @@ export class ResourceLibraryService {
       return ResponseFactory.success<ResourceLibraryResponseDto[]>(
         generateMessage('updated', this._entity),
         ResourceLibraryResponseDto.fromEntities(recordsSaved),
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async changeLibraryStatusMultiple(
+    changeLibraryStatusDto: ChangeResourceLibraryStatusDto,
+  ) {
+    const ctx = { method: 'changeLibraryStatusMultiple', entity: this._entity };
+    this.logger.start(ctx);
+
+    try {
+      const { ids, status } = changeLibraryStatusDto;
+      this.logger.debug(
+        ctx,
+        'start',
+        `Updating status for lessons with IDs: ${ids.join(', ')}, new status: ${status}`,
+      );
+
+      const libraries = await this.resourceLibraryRepository.find({
+        where: { id: In(ids) },
+      });
+
+      if (!libraries || libraries.length === 0) {
+        const reason = `No resource library found with IDs: ${ids.join(', ')}`;
+        this.logger.warn(ctx, 'failed', reason);
+        throw new NotFoundException(reason);
+      }
+
+      for (const library of libraries) {
+        library.status = status;
+      }
+
+      await this.resourceLibraryRepository.save(libraries);
+
+      const records = await this.resourceLibraryRepository.find({
+        where: { id: In(ids) },
+      });
+      this.logger.success(ctx, 'updated');
+
+      return ResponseFactory.success<ResourceLibraryResponseDto[]>(
+        generateMessage('updated', this._entity),
+        ResourceLibraryResponseDto.fromEntities(records),
       );
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity);

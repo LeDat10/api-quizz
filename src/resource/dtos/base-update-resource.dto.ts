@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
+import { ResourceStatus } from '../enums/resource-type.enum';
 
 export class BaseUpdateResourceDto {
   @IsString()
@@ -16,6 +17,10 @@ export class BaseUpdateResourceDto {
   @IsOptional()
   @ApiPropertyOptional()
   description?: string;
+
+  @IsEnum(ResourceStatus)
+  @IsOptional()
+  status?: ResourceStatus;
 
   @IsInt()
   @IsOptional()

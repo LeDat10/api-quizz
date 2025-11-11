@@ -3,3 +3,10 @@ export enum ResourceType {
   VIDEO = 'video',
   AUDIO = 'audio',
 }
+
+export enum ResourceStatus {
+  DRAFT = 'draft',
+  PUBLISHED = 'published',
+  INACTIVE = 'inactive',
+  ARCHIVED = 'archived',
+}

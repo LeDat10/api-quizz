@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
+import { LibraryStatus } from '../enums/resource-library.enum';
 
 export class UpdateResourceLibraryDto {
   @IsString()
@@ -16,4 +17,9 @@ export class UpdateResourceLibraryDto {
   @IsOptional()
   @ApiPropertyOptional()
   position?: number;
+
+  @IsEnum(LibraryStatus)
+  @IsOptional()
+  @ApiPropertyOptional()
+  status?: LibraryStatus;
 }

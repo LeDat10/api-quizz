@@ -8,6 +8,7 @@ export class ResourceLibraryResponseDto {
     this.description = entity.description;
     this.position = entity.position;
     this.slug = entity.slug;
+    this.status = entity.status;
     this.createdAt = entity.createdAt;
     this.updatedAt = entity.updatedAt;
     this.deletedAt = entity.createdAt;
@@ -23,6 +24,9 @@ export class ResourceLibraryResponseDto {
 
   @ApiProperty()
   position: number;
+
+  @ApiProperty()
+  status: string;
 
   @ApiProperty()
   slug: string;

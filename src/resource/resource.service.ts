@@ -24,6 +24,7 @@ import { PaginationProvider } from 'src/common/pagination/pagination.provider';
 import { ResourceResponseDto } from './dtos/resource-response.dto';
 import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';
 import { ChangeResourcePositionDto } from './dtos/change-resource-position.dto';
+import { ChangeResourceStatusDto } from './dtos/chang-resource-status.dto';
 
 @Injectable()
 export class ResourceService {
@@ -49,6 +50,7 @@ export class ResourceService {
       url: resource.url,
       slug: resource.slug,
       position: resource.position,
+      status: resource.status,
       resourceType: resource.resourceType,
       libraryId: resource.library?.id,
       createdAt: resource.createdAt,
@@ -648,6 +650,54 @@ export class ResourceService {
       const responseData = records.map(this.transform);
       return ResponseFactory.success<ResourceResponseDto[]>(
         `Updated positions for ${records.length} resources`,
+        responseData,
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async changeResourceStatusMultiple(
+    changeResourceStatusDto: ChangeResourceStatusDto,
+  ) {
+    const ctx = {
+      method: 'changeResourceStatusMultiple',
+      entity: this._entity,
+    };
+    this.logger.start(ctx);
+
+    try {
+      const { ids, status } = changeResourceStatusDto;
+
+      this.logger.debug(
+        ctx,
+        'start',
+        `Updating status for lessons with IDs: ${ids.join(', ')}, new status: ${status}`,
+      );
+      const resources = await this.resourceRepository.find({
+        where: { id: In(ids) },
+        relations: ['library'],
+      });
+
+      if (resources.length === 0 || !resources) {
+        const reason = `No resources found with IDs: ${ids.join(', ')}`;
+        this.logger.warn(ctx, 'failed', reason);
+        throw new NotFoundException(reason);
+      }
+
+      for (const resource of resources) {
+        resource.status = status;
+      }
+
+      await this.resourceRepository.save(resources);
+      const records = await this.resourceRepository.find({
+        where: { id: In(ids) },
+        relations: ['library'],
+      });
+      this.logger.success(ctx, 'updated');
+      const responseData = records.map(this.transform);
+      return ResponseFactory.success<ResourceResponseDto[]>(
+        generateMessage('updated', this._entity),
         responseData,
       );
     } catch (error) {

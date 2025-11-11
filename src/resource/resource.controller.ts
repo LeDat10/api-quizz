@@ -26,6 +26,7 @@ import { ResourceResponseDto } from './dtos/resource-response.dto';
 import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';
 import { PaginationResponse } from 'src/common/pagination/dtos/pagination-response.dto';
 import { ChangeResourcePositionDto } from './dtos/change-resource-position.dto';
+import { ChangeResourceStatusDto } from './dtos/chang-resource-status.dto';
 
 @ApiTags('Resources')
 @Controller('resource')
@@ -273,6 +274,24 @@ export class ResourceController {
   ) {
     return await this.resourceService.changeResourcePositionMultiple(
       changeResourcePositionDtos,
+    );
+  }
+
+  @Patch('status-multiple')
+  @ApiOperation({ summary: 'Change status for multiple resources' })
+  @ApiBody({ type: ChangeResourceStatusDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated resource statuses',
+    type: BaseResponseDto<ResourceResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async ChangeResourceStatusMultiple(
+    @Body() changeResourceStatusDto: ChangeResourceStatusDto,
+  ) {
+    return await this.resourceService.changeResourceStatusMultiple(
+      changeResourceStatusDto,
     );
   }
 }

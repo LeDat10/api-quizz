@@ -12,7 +12,7 @@ import {
   TableInheritance,
   UpdateDateColumn,
 } from 'typeorm';
-import { ResourceType } from '../enums/resource-type.enum';
+import { ResourceStatus, ResourceType } from '../enums/resource-type.enum';
 
 @Entity()
 @TableInheritance({ column: { type: 'varchar', name: 'resourceType' } })
@@ -45,6 +45,13 @@ export abstract class Resource {
 
   @Column({ type: 'enum', enum: ResourceType })
   resourceType: ResourceType;
+
+  @Column({
+    type: 'enum',
+    enum: ResourceStatus,
+    default: ResourceStatus.DRAFT,
+  })
+  status: ResourceStatus;
 
   @CreateDateColumn()
   createdAt: Date;
