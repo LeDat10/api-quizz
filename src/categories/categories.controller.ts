@@ -214,7 +214,7 @@ export class CategoriesController {
     return await this.cateogriesService.restoreCategoryMultiple(ids);
   }
 
-  @Patch('change-status')
+  @Patch('status-multiple')
   @ApiOperation({ summary: 'Change status for multiple lessons' })
   @ApiBody({ type: ChangeCategoryStatusDto })
   @ApiResponse({
@@ -232,7 +232,7 @@ export class CategoriesController {
     );
   }
 
-  @Patch('change-position')
+  @Patch('position-multiple')
   @ApiOperation({ summary: 'Change position for multiple categories' })
   @ApiBody({ type: ChangeCategoryPositionDto, isArray: true })
   @ApiResponse({

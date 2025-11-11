@@ -241,7 +241,7 @@ export class LessonController {
     return await this.lessonService.restoreLesson(id);
   }
 
-  @Patch('change-status')
+  @Patch('status-multiple')
   @ApiOperation({ summary: 'Change status for multiple lessons' })
   @ApiBody({ type: ChangeLessonStatusDto })
   @ApiResponse({
@@ -259,7 +259,7 @@ export class LessonController {
     );
   }
 
-  @Patch('change-position')
+  @Patch('position-multiple')
   @ApiOperation({ summary: 'Change position for multiple lessons' })
   @ApiBody({ type: ChangeLessonPositionDto, isArray: true })
   @ApiResponse({

@@ -208,7 +208,7 @@ export class CoursesController {
     return this.coursesService.restoreCourseMultiple(ids);
   }
 
-  @Patch('change-status')
+  @Patch('status-multiple')
   @ApiOperation({ summary: 'Change status for multiple courses' })
   @ApiBody({ type: ChangeCourseStatusDto })
   @ApiResponse({
@@ -226,7 +226,7 @@ export class CoursesController {
     );
   }
 
-  @Patch('change-position')
+  @Patch('position-multiple')
   @ApiOperation({ summary: 'Change position for multiple courses' })
   @ApiBody({ type: ChangeCoursePositionDto, isArray: true })
   @ApiResponse({

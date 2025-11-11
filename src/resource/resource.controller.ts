@@ -258,7 +258,7 @@ export class ResourceController {
     return await this.resourceService.restorePdfResourceMultiple(ids);
   }
 
-  @Patch('change-status')
+  @Patch('position-multiple')
   @ApiOperation({ summary: 'Change position for multiple resources' })
   @ApiBody({ type: ChangeResourcePositionDto, isArray: true })
   @ApiResponse({

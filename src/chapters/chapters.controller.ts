@@ -208,7 +208,7 @@ export class ChaptersController {
     return this.chaptersService.restoreChapterMultiple(ids);
   }
 
-  @Patch('change-status')
+  @Patch('status-multiple')
   @ApiOperation({ summary: 'Change status for multiple chapters' })
   @ApiBody({ type: ChangeChapterStatusDto })
   @ApiResponse({
@@ -226,7 +226,7 @@ export class ChaptersController {
     );
   }
 
-  @Patch('change-position')
+  @Patch('position-multiple')
   @ApiOperation({ summary: 'Change position for multiple chapters' })
   @ApiBody({ type: ChangeChapterPositionDto, isArray: true })
   @ApiResponse({
