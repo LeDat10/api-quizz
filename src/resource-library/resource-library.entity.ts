@@ -20,6 +20,11 @@ export class ResourceLibrary {
   name: string;
 
   @Column({
+    nullable: true,
+  })
+  description?: string;
+
+  @Column({
     nullable: false,
   })
   position: number;

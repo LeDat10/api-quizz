@@ -233,11 +233,11 @@ export class CategoriesController {
   }
 
   @Patch('change-position')
-  @ApiOperation({ summary: 'Change position for multiple lessons' })
+  @ApiOperation({ summary: 'Change position for multiple categories' })
   @ApiBody({ type: ChangeCategoryPositionDto, isArray: true })
   @ApiResponse({
     status: 200,
-    description: 'Successfully updated lesson positions',
+    description: 'Successfully updated category positions',
     type: BaseResponseDto<CategoryResponseDto[]>,
   })
   @ApiResponse({ status: 400, description: 'Invalid request data' })

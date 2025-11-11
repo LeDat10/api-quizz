@@ -523,6 +523,7 @@ export class CategoriesService {
       }
 
       const records = await this.categoryRepository.save(categories);
+      this.logger.success(ctx, 'updated');
       return ResponseFactory.success<CategoryResponseDto[]>(
         generateMessage('updated', this._entity),
         CategoryResponseDto.fromEntities(records),
