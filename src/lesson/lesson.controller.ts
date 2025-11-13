@@ -61,6 +61,44 @@ export class LessonController {
     return await this.lessonService.getAllLessons(paginationQueryDto);
   }
 
+  @Post()
+  @ApiOperation({
+    summary: 'Create a new lesson',
+    description: 'Create a new lesson and assign it to an existing chapter.',
+  })
+  @ApiBody({
+    type: CreateLessonDto,
+    examples: {
+      example1: {
+        summary: 'Example payload',
+        value: {
+          title: 'Introduction to React',
+          lessonType: 'video',
+          lessonStatus: 'published',
+          position: 1,
+          chapterId: 2,
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Lesson created successfully.',
+    type: BaseResponseDto<LessonResponseDto>,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input or missing required fields',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Chapter not found (if chapterId is provided)',
+  })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async createLesson(@Body() createLesson: CreateLessonDto) {
+    return await this.lessonService.createLesson(createLesson);
+  }
+
   @Get('deleted')
   @ApiOperation({
     summary: 'Get deleted lessons',
@@ -117,6 +155,42 @@ export class LessonController {
     return await this.lessonService.restoreLessonMultiple(ids);
   }
 
+  @Patch('status-multiple')
+  @ApiOperation({ summary: 'Change status for multiple lessons' })
+  @ApiBody({ type: ChangeLessonStatusDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated lesson statuses',
+    type: BaseResponseDto<LessonResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async changeLessonStatusMultiple(
+    @Body() changeLessonStatusDto: ChangeLessonStatusDto,
+  ) {
+    return await this.lessonService.changeLessonStatusMultiple(
+      changeLessonStatusDto,
+    );
+  }
+
+  @Patch('position-multiple')
+  @ApiOperation({ summary: 'Change position for multiple lessons' })
+  @ApiBody({ type: ChangeLessonPositionDto, isArray: true })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated lesson positions',
+    type: BaseResponseDto<LessonResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async changeLessonPositionMultiple(
+    @Body() changeLessonPositionDto: ChangeLessonPositionDto[],
+  ) {
+    return await this.lessonService.changeLessonPositionMultiple(
+      changeLessonPositionDto,
+    );
+  }
+
   @Get(':id')
   @ApiOperation({
     summary: 'Get lesson details by ID',
@@ -136,44 +210,6 @@ export class LessonController {
   @ApiResponse({ status: 404, description: 'Lesson not found.' })
   public async GetLessonDetail(@Param('id', ParseIntPipe) id: number) {
     return await this.lessonService.getDetailLesson(id);
-  }
-
-  @Post()
-  @ApiOperation({
-    summary: 'Create a new lesson',
-    description: 'Create a new lesson and assign it to an existing chapter.',
-  })
-  @ApiBody({
-    type: CreateLessonDto,
-    examples: {
-      example1: {
-        summary: 'Example payload',
-        value: {
-          title: 'Introduction to React',
-          lessonType: 'video',
-          lessonStatus: 'published',
-          position: 1,
-          chapterId: 2,
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'Lesson created successfully.',
-    type: BaseResponseDto<LessonResponseDto>,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid input or missing required fields',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Chapter not found (if chapterId is provided)',
-  })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async createLesson(@Body() createLesson: CreateLessonDto) {
-    return await this.lessonService.createLesson(createLesson);
   }
 
   @Patch(':id')
@@ -239,42 +275,6 @@ export class LessonController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   public async Restorelesson(@Param('id', ParseIntPipe) id: number) {
     return await this.lessonService.restoreLesson(id);
-  }
-
-  @Patch('status-multiple')
-  @ApiOperation({ summary: 'Change status for multiple lessons' })
-  @ApiBody({ type: ChangeLessonStatusDto })
-  @ApiResponse({
-    status: 200,
-    description: 'Successfully updated lesson statuses',
-    type: BaseResponseDto<LessonResponseDto[]>,
-  })
-  @ApiResponse({ status: 400, description: 'Invalid request data' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async changeLessonStatusMultiple(
-    @Body() changeLessonStatusDto: ChangeLessonStatusDto,
-  ) {
-    return await this.lessonService.changeLessonStatusMultiple(
-      changeLessonStatusDto,
-    );
-  }
-
-  @Patch('position-multiple')
-  @ApiOperation({ summary: 'Change position for multiple lessons' })
-  @ApiBody({ type: ChangeLessonPositionDto, isArray: true })
-  @ApiResponse({
-    status: 200,
-    description: 'Successfully updated lesson positions',
-    type: BaseResponseDto<LessonResponseDto[]>,
-  })
-  @ApiResponse({ status: 400, description: 'Invalid request data' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async changeLessonPositionMultiple(
-    @Body() changeLessonPositionDto: ChangeLessonPositionDto[],
-  ) {
-    return await this.lessonService.changeLessonPositionMultiple(
-      changeLessonPositionDto,
-    );
   }
 
   @Delete(':id/soft-delete')

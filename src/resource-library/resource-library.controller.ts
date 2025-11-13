@@ -62,6 +62,28 @@ export class ResourceLibraryController {
     return await this.resourceLibraryService.getAllLibrary(paginationQueryDto);
   }
 
+  @Post()
+  @ApiOperation({
+    summary: 'Create a Resource Library',
+    description: 'Upload and create a new Resource Library in the system.',
+  })
+  @ApiBody({ type: CreateResourceLibraryDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Resource Library successfully created',
+    type: BaseResponseDto<ResourceLibraryResponseDto>,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input or missing required fields',
+  })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async CreateLibrary(
+    @Body() createLibraryDto: CreateResourceLibraryDto,
+  ) {
+    return await this.resourceLibraryService.createLibrary(createLibraryDto);
+  }
+
   @Get('deleted')
   @ApiOperation({
     summary: 'Get all deleted resources library',
@@ -103,6 +125,49 @@ export class ResourceLibraryController {
     );
   }
 
+  @Patch('position-multiple')
+  @ApiOperation({ summary: 'Change position for multiple resources library' })
+  @ApiBody({ type: ChangeResourceLibraryPositionDto, isArray: true })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated resource library positions',
+    type: BaseResponseDto<ResourceLibraryResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async ChangeLibraryPositionMultiple(
+    @Body() changeLibraryPositionDtos: ChangeResourceLibraryPositionDto[],
+  ) {
+    return await this.resourceLibraryService.changeLibraryPositionMutiple(
+      changeLibraryPositionDtos,
+    );
+  }
+
+  @Patch('restore-multiple')
+  @ApiOperation({
+    summary: 'Restore multiple Resource Library',
+    description:
+      'Restore several soft-deleted Resource Library at once by providing a list of IDs.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'array',
+      items: { type: 'number', example: 1 },
+      example: [1, 2, 3],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Multiple Resource Library successfully restored',
+    type: BaseResponseDto<ResourceLibraryResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'No Resource Library IDs provided' })
+  @ApiResponse({ status: 404, description: 'Some or all categories not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async RestoreLibraryMultiple(@Body() ids: number[]) {
+    return await this.resourceLibraryService.restoreLibraryMultiple(ids);
+  }
+
   @Get(':id')
   @ApiOperation({
     summary: 'Get Resource Library detail',
@@ -133,28 +198,6 @@ export class ResourceLibraryController {
   })
   public async GetLibraryDetail(@Param('id', ParseIntPipe) id: number) {
     return await this.resourceLibraryService.getLibraryDetail(id);
-  }
-
-  @Post()
-  @ApiOperation({
-    summary: 'Create a Resource Library',
-    description: 'Upload and create a new Resource Library in the system.',
-  })
-  @ApiBody({ type: CreateResourceLibraryDto })
-  @ApiResponse({
-    status: 201,
-    description: 'Resource Library successfully created',
-    type: BaseResponseDto<ResourceLibraryResponseDto>,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid input or missing required fields',
-  })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async CreateLibrary(
-    @Body() createLibraryDto: CreateResourceLibraryDto,
-  ) {
-    return await this.resourceLibraryService.createLibrary(createLibraryDto);
   }
 
   @Patch(':id')
@@ -215,31 +258,6 @@ export class ResourceLibraryController {
     return await this.resourceLibraryService.restoreLibrary(id);
   }
 
-  @Patch('restore-multiple')
-  @ApiOperation({
-    summary: 'Restore multiple Resource Library',
-    description:
-      'Restore several soft-deleted Resource Library at once by providing a list of IDs.',
-  })
-  @ApiBody({
-    schema: {
-      type: 'array',
-      items: { type: 'number', example: 1 },
-      example: [1, 2, 3],
-    },
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Multiple Resource Library successfully restored',
-    type: BaseResponseDto<ResourceLibraryResponseDto[]>,
-  })
-  @ApiResponse({ status: 400, description: 'No Resource Library IDs provided' })
-  @ApiResponse({ status: 404, description: 'Some or all categories not found' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async RestoreLibraryMultiple(@Body() ids: number[]) {
-    return await this.resourceLibraryService.restoreLibraryMultiple(ids);
-  }
-
   @Delete(':id/soft-delete')
   @ApiOperation({
     summary: 'Soft delete a Resource Library',
@@ -282,23 +300,5 @@ export class ResourceLibraryController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   public async HardDeleteLibrary(@Param('id', ParseIntPipe) id: number) {
     return await this.resourceLibraryService.hardDeletedLibrary(id);
-  }
-
-  @Patch('position-multiple')
-  @ApiOperation({ summary: 'Change position for multiple resources library' })
-  @ApiBody({ type: ChangeResourceLibraryPositionDto, isArray: true })
-  @ApiResponse({
-    status: 200,
-    description: 'Successfully updated resource library positions',
-    type: BaseResponseDto<ResourceLibraryResponseDto[]>,
-  })
-  @ApiResponse({ status: 400, description: 'Invalid request data' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async ChangeLibraryPositionMultiple(
-    @Body() changeLibraryPositionDtos: ChangeResourceLibraryPositionDto[],
-  ) {
-    return await this.resourceLibraryService.changeLibraryPositionMutiple(
-      changeLibraryPositionDtos,
-    );
   }
 }

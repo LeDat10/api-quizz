@@ -114,6 +114,67 @@ export class ResourceController {
     return await this.resourceService.createPdfResource(createPdfResourceDto);
   }
 
+  @Patch('position-multiple')
+  @ApiOperation({ summary: 'Change position for multiple resources' })
+  @ApiBody({ type: ChangeResourcePositionDto, isArray: true })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated resource positions',
+    type: BaseResponseDto<ResourceResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async ChangeResourcePositionMultiple(
+    changeResourcePositionDtos: ChangeResourcePositionDto[],
+  ) {
+    return await this.resourceService.changeResourcePositionMultiple(
+      changeResourcePositionDtos,
+    );
+  }
+
+  @Patch('status-multiple')
+  @ApiOperation({ summary: 'Change status for multiple resources' })
+  @ApiBody({ type: ChangeResourceStatusDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated resource statuses',
+    type: BaseResponseDto<ResourceResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async ChangeResourceStatusMultiple(
+    @Body() changeResourceStatusDto: ChangeResourceStatusDto,
+  ) {
+    return await this.resourceService.changeResourceStatusMultiple(
+      changeResourceStatusDto,
+    );
+  }
+
+  @Patch('pdf/restore-multiple')
+  @ApiOperation({
+    summary: 'Restore multiple PDF resources',
+    description:
+      'Restore several soft-deleted PDF resources at once by providing a list of IDs.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'array',
+      items: { type: 'number', example: 1 },
+      example: [1, 2, 3],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Multiple PDF resources successfully restored',
+    type: BaseResponseDto<PdfResourceResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'No resource IDs provided' })
+  @ApiResponse({ status: 404, description: 'Some or all resources not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async RestoreResourceMultiple(@Body() ids: number[]) {
+    return await this.resourceService.restorePdfResourceMultiple(ids);
+  }
+
   @Get('pdf/:id')
   @ApiOperation({
     summary: 'Get PDF resource detail',
@@ -232,66 +293,5 @@ export class ResourceController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   public async RestoreResource(@Param('id', ParseIntPipe) id: number) {
     return await this.resourceService.restorePdfResource(id);
-  }
-
-  @Patch('pdf/restore-multiple')
-  @ApiOperation({
-    summary: 'Restore multiple PDF resources',
-    description:
-      'Restore several soft-deleted PDF resources at once by providing a list of IDs.',
-  })
-  @ApiBody({
-    schema: {
-      type: 'array',
-      items: { type: 'number', example: 1 },
-      example: [1, 2, 3],
-    },
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Multiple PDF resources successfully restored',
-    type: BaseResponseDto<PdfResourceResponseDto[]>,
-  })
-  @ApiResponse({ status: 400, description: 'No resource IDs provided' })
-  @ApiResponse({ status: 404, description: 'Some or all resources not found' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async RestoreResourceMultiple(@Body() ids: number[]) {
-    return await this.resourceService.restorePdfResourceMultiple(ids);
-  }
-
-  @Patch('position-multiple')
-  @ApiOperation({ summary: 'Change position for multiple resources' })
-  @ApiBody({ type: ChangeResourcePositionDto, isArray: true })
-  @ApiResponse({
-    status: 200,
-    description: 'Successfully updated resource positions',
-    type: BaseResponseDto<ResourceResponseDto[]>,
-  })
-  @ApiResponse({ status: 400, description: 'Invalid request data' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async ChangeResourcePositionMultiple(
-    changeResourcePositionDtos: ChangeResourcePositionDto[],
-  ) {
-    return await this.resourceService.changeResourcePositionMultiple(
-      changeResourcePositionDtos,
-    );
-  }
-
-  @Patch('status-multiple')
-  @ApiOperation({ summary: 'Change status for multiple resources' })
-  @ApiBody({ type: ChangeResourceStatusDto })
-  @ApiResponse({
-    status: 200,
-    description: 'Successfully updated resource statuses',
-    type: BaseResponseDto<ResourceResponseDto[]>,
-  })
-  @ApiResponse({ status: 400, description: 'Invalid request data' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async ChangeResourceStatusMultiple(
-    @Body() changeResourceStatusDto: ChangeResourceStatusDto,
-  ) {
-    return await this.resourceService.changeResourceStatusMultiple(
-      changeResourceStatusDto,
-    );
   }
 }

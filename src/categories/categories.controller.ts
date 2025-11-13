@@ -62,6 +62,26 @@ export class CategoriesController {
     return await this.cateogriesService.getAllCategories(paginationQueryDto);
   }
 
+  @Post()
+  @ApiOperation({
+    summary: 'Create a Category',
+    description: 'Upload and create a new Category in the system.',
+  })
+  @ApiBody({ type: CreateCategoryDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Category successfully created',
+    type: BaseResponseDto<CategoryResponseDto>,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input or missing required fields',
+  })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async CreateCategory(@Body() createCategoryDto: CreateCategoryDto) {
+    return await this.cateogriesService.createCategory(createCategoryDto);
+  }
+
   @Get('deleted')
   @ApiOperation({
     summary: 'Get all deleted categories',
@@ -85,24 +105,65 @@ export class CategoriesController {
     );
   }
 
-  @Post()
+  @Patch('restore-multiple')
   @ApiOperation({
-    summary: 'Create a Category',
-    description: 'Upload and create a new Category in the system.',
+    summary: 'Restore multiple Category',
+    description:
+      'Restore several soft-deleted Category at once by providing a list of IDs.',
   })
-  @ApiBody({ type: CreateCategoryDto })
+  @ApiBody({
+    schema: {
+      type: 'array',
+      items: { type: 'number', example: 1 },
+      example: [1, 2, 3],
+    },
+  })
   @ApiResponse({
-    status: 201,
-    description: 'Category successfully created',
-    type: BaseResponseDto<CategoryResponseDto>,
+    status: 200,
+    description: 'Multiple Category successfully restored',
+    type: BaseResponseDto<CategoryResponseDto[]>,
   })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid input or missing required fields',
-  })
+  @ApiResponse({ status: 400, description: 'No category IDs provided' })
+  @ApiResponse({ status: 404, description: 'Some or all categories not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async CreateCategory(@Body() createCategoryDto: CreateCategoryDto) {
-    return await this.cateogriesService.createCategory(createCategoryDto);
+  public async RestoreCategoryMultiple(@Body() ids: number[]) {
+    return await this.cateogriesService.restoreCategoryMultiple(ids);
+  }
+
+  @Patch('status-multiple')
+  @ApiOperation({ summary: 'Change status for multiple lessons' })
+  @ApiBody({ type: ChangeCategoryStatusDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated lesson statuses',
+    type: BaseResponseDto<CategoryResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async ChangeCategoryStatusMultiple(
+    changeCategoryStatusDto: ChangeCategoryStatusDto,
+  ) {
+    return await this.cateogriesService.changeCategoryStatusMultiple(
+      changeCategoryStatusDto,
+    );
+  }
+
+  @Patch('position-multiple')
+  @ApiOperation({ summary: 'Change position for multiple categories' })
+  @ApiBody({ type: ChangeCategoryPositionDto, isArray: true })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated category positions',
+    type: BaseResponseDto<CategoryResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async ChangeCategoryPositionMultiple(
+    changeCategoryPositionDtos: ChangeCategoryPositionDto[],
+  ) {
+    return await this.cateogriesService.changeCategoryPositionMultiple(
+      changeCategoryPositionDtos,
+    );
   }
 
   @Get(':id')
@@ -187,67 +248,6 @@ export class CategoriesController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   public async RestoreCategory(@Param('id', ParseIntPipe) id: number) {
     return await this.cateogriesService.restoreCategory(id);
-  }
-
-  @Patch('restore-multiple')
-  @ApiOperation({
-    summary: 'Restore multiple Category',
-    description:
-      'Restore several soft-deleted Category at once by providing a list of IDs.',
-  })
-  @ApiBody({
-    schema: {
-      type: 'array',
-      items: { type: 'number', example: 1 },
-      example: [1, 2, 3],
-    },
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Multiple Category successfully restored',
-    type: BaseResponseDto<CategoryResponseDto[]>,
-  })
-  @ApiResponse({ status: 400, description: 'No category IDs provided' })
-  @ApiResponse({ status: 404, description: 'Some or all categories not found' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async RestoreCategoryMultiple(@Body() ids: number[]) {
-    return await this.cateogriesService.restoreCategoryMultiple(ids);
-  }
-
-  @Patch('status-multiple')
-  @ApiOperation({ summary: 'Change status for multiple lessons' })
-  @ApiBody({ type: ChangeCategoryStatusDto })
-  @ApiResponse({
-    status: 200,
-    description: 'Successfully updated lesson statuses',
-    type: BaseResponseDto<CategoryResponseDto[]>,
-  })
-  @ApiResponse({ status: 400, description: 'Invalid request data' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async ChangeCategoryStatusMultiple(
-    changeCategoryStatusDto: ChangeCategoryStatusDto,
-  ) {
-    return await this.cateogriesService.changeCategoryStatusMultiple(
-      changeCategoryStatusDto,
-    );
-  }
-
-  @Patch('position-multiple')
-  @ApiOperation({ summary: 'Change position for multiple categories' })
-  @ApiBody({ type: ChangeCategoryPositionDto, isArray: true })
-  @ApiResponse({
-    status: 200,
-    description: 'Successfully updated category positions',
-    type: BaseResponseDto<CategoryResponseDto[]>,
-  })
-  @ApiResponse({ status: 400, description: 'Invalid request data' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async ChangeCategoryPositionMultiple(
-    changeCategoryPositionDtos: ChangeCategoryPositionDto[],
-  ) {
-    return await this.cateogriesService.changeCategoryPositionMultiple(
-      changeCategoryPositionDtos,
-    );
   }
 
   @Delete(':id/soft-delete')

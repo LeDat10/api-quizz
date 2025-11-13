@@ -61,27 +61,6 @@ export class CoursesController {
     return await this.coursesService.getAllCourses(paginationQueryDto);
   }
 
-  @Get('deleted')
-  @ApiOperation({
-    summary: 'Get all deleted courses',
-    description:
-      'Retrieve all soft-deleted courses for administrative or restoration purposes.',
-  })
-  @ApiQuery({ name: 'page', required: false, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, example: 10 })
-  @ApiResponse({
-    status: 200,
-    description: 'Successfully retrieved deleted courses',
-    type: PaginationResponse<CourseResponseDto>,
-  })
-  @ApiResponse({ status: 400, description: 'Invalid query parameters' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async getAllCoursesDeleted(
-    @Query() paginationQueryDto: PaginationQueryDto,
-  ) {
-    return this.coursesService.getAllCourseDeleted(paginationQueryDto);
-  }
-
   @Post()
   @ApiOperation({
     summary: 'Create a Course',
@@ -104,6 +83,88 @@ export class CoursesController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   public async createCourse(@Body() createCourseDto: CreateCourseDto) {
     return await this.coursesService.createCourse(createCourseDto);
+  }
+
+  @Get('deleted')
+  @ApiOperation({
+    summary: 'Get all deleted courses',
+    description:
+      'Retrieve all soft-deleted courses for administrative or restoration purposes.',
+  })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved deleted courses',
+    type: PaginationResponse<CourseResponseDto>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid query parameters' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async getAllCoursesDeleted(
+    @Query() paginationQueryDto: PaginationQueryDto,
+  ) {
+    return this.coursesService.getAllCourseDeleted(paginationQueryDto);
+  }
+
+  @Patch('restore-multiple')
+  @ApiOperation({
+    summary: 'Restore multiple Course',
+    description:
+      'Restore several soft-deleted Course at once by providing a list of IDs.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'array',
+      items: { type: 'number', example: 1 },
+      example: [1, 2, 3],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Multiple courses successfully restored',
+    type: BaseResponseDto<CourseResponseDto>,
+  })
+  @ApiResponse({ status: 400, description: 'No course IDs provided' })
+  @ApiResponse({ status: 404, description: 'Some or all courses not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async restoreCourseMultiple(@Body() ids: number[]) {
+    return this.coursesService.restoreCourseMultiple(ids);
+  }
+
+  @Patch('status-multiple')
+  @ApiOperation({ summary: 'Change status for multiple courses' })
+  @ApiBody({ type: ChangeCourseStatusDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated course statuses',
+    type: BaseResponseDto<CourseResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async ChangeCourseStatusMultiple(
+    changeCourseStatusDto: ChangeCourseStatusDto,
+  ) {
+    return await this.coursesService.changeCourseStatusMultiple(
+      changeCourseStatusDto,
+    );
+  }
+
+  @Patch('position-multiple')
+  @ApiOperation({ summary: 'Change position for multiple courses' })
+  @ApiBody({ type: ChangeCoursePositionDto, isArray: true })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated course positions',
+    type: BaseResponseDto<CourseResponseDto[]>,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async ChangeCoursePositionMulitple(
+    changeCoursePositionDtos: ChangeCoursePositionDto[],
+  ) {
+    return await this.coursesService.changeCoursePositionMultiple(
+      changeCoursePositionDtos,
+    );
   }
 
   @Get(':id')
@@ -181,67 +242,6 @@ export class CoursesController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   public async restoreCourse(@Param('id', ParseIntPipe) id: number) {
     return this.coursesService.restoreCourse(id);
-  }
-
-  @Patch('restore-multiple')
-  @ApiOperation({
-    summary: 'Restore multiple Course',
-    description:
-      'Restore several soft-deleted Course at once by providing a list of IDs.',
-  })
-  @ApiBody({
-    schema: {
-      type: 'array',
-      items: { type: 'number', example: 1 },
-      example: [1, 2, 3],
-    },
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Multiple courses successfully restored',
-    type: BaseResponseDto<CourseResponseDto>,
-  })
-  @ApiResponse({ status: 400, description: 'No course IDs provided' })
-  @ApiResponse({ status: 404, description: 'Some or all courses not found' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async restoreCourseMultiple(@Body() ids: number[]) {
-    return this.coursesService.restoreCourseMultiple(ids);
-  }
-
-  @Patch('status-multiple')
-  @ApiOperation({ summary: 'Change status for multiple courses' })
-  @ApiBody({ type: ChangeCourseStatusDto })
-  @ApiResponse({
-    status: 200,
-    description: 'Successfully updated course statuses',
-    type: BaseResponseDto<CourseResponseDto[]>,
-  })
-  @ApiResponse({ status: 400, description: 'Invalid request data' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async ChangeCourseStatusMultiple(
-    changeCourseStatusDto: ChangeCourseStatusDto,
-  ) {
-    return await this.coursesService.changeCourseStatusMultiple(
-      changeCourseStatusDto,
-    );
-  }
-
-  @Patch('position-multiple')
-  @ApiOperation({ summary: 'Change position for multiple courses' })
-  @ApiBody({ type: ChangeCoursePositionDto, isArray: true })
-  @ApiResponse({
-    status: 200,
-    description: 'Successfully updated course positions',
-    type: BaseResponseDto<CourseResponseDto[]>,
-  })
-  @ApiResponse({ status: 400, description: 'Invalid request data' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async ChangeCoursePositionMulitple(
-    changeCoursePositionDtos: ChangeCoursePositionDto[],
-  ) {
-    return await this.coursesService.changeCoursePositionMultiple(
-      changeCoursePositionDtos,
-    );
   }
 
   @Delete(':id/soft-delete')

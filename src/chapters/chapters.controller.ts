@@ -61,59 +61,6 @@ export class ChaptersController {
     return this.chaptersService.getAllChapter(paginationQueryDto);
   }
 
-  @Get('deleted')
-  @ApiOperation({
-    summary: 'Get all deleted chapters',
-    description:
-      'Retrieve all soft-deleted chapters for administrative or restoration purposes.',
-  })
-  @ApiQuery({ name: 'page', required: false, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, example: 10 })
-  @ApiResponse({
-    status: 200,
-    description: 'Successfully retrieved deleted chapters',
-    type: PaginationResponse<ChapterResponseDto>,
-  })
-  @ApiResponse({ status: 400, description: 'Invalid query parameters' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async GetAllChapterDeleted(
-    @Query() paginationQueryDto: PaginationQueryDto,
-  ) {
-    return this.chaptersService.getAllChapterDeleted(paginationQueryDto);
-  }
-
-  @Get(':id')
-  @ApiOperation({
-    summary: 'Get Chapter detail',
-    description:
-      'Retrieve detailed information about a specific Chapter by its ID, including metadata and related information.',
-  })
-  @ApiParam({
-    name: 'id',
-    description: 'Unique identifier of the Chapter',
-    example: 1,
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Successfully retrieved Chapter details',
-    type: BaseResponseDto<ChapterResponseDto>,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid ID parameter or unsupported resource type',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Chapter not found or has been deleted',
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal server error',
-  })
-  public async GetChapterDetail(@Param('id', ParseIntPipe) id: number) {
-    return this.chaptersService.getChapterDetail(id);
-  }
-
   @Post()
   @ApiOperation({
     summary: 'Create a Chapter',
@@ -138,49 +85,25 @@ export class ChaptersController {
     return this.chaptersService.createChapter(createChapterDto);
   }
 
-  @Patch(':id')
+  @Get('deleted')
   @ApiOperation({
-    summary: 'Update a Chapter',
-    description: 'Update the details of an existing Chapter by its ID.',
+    summary: 'Get all deleted chapters',
+    description:
+      'Retrieve all soft-deleted chapters for administrative or restoration purposes.',
   })
-  @ApiParam({
-    name: 'id',
-    description: 'The ID of the Chapter',
-    example: 1,
-  })
-  @ApiBody({ type: UpdateChapterDto })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
   @ApiResponse({
     status: 200,
-    description: 'Chapter successfully updated',
-    type: BaseResponseDto<ChapterResponseDto>,
+    description: 'Successfully retrieved deleted chapters',
+    type: PaginationResponse<ChapterResponseDto>,
   })
-  @ApiResponse({ status: 404, description: 'Chapter not found' })
+  @ApiResponse({ status: 400, description: 'Invalid query parameters' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async UpdateChapter(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateChapterDto: UpdateChapterDto,
+  public async GetAllChapterDeleted(
+    @Query() paginationQueryDto: PaginationQueryDto,
   ) {
-    return this.chaptersService.updateChapter(id, updateChapterDto);
-  }
-
-  @Patch(':id/restore')
-  @ApiOperation({
-    summary: 'Restore a soft-deleted Chapter',
-    description: 'Restore a previously soft-deleted Chapter by its ID.',
-  })
-  @ApiParam({ name: 'id', description: 'ID of the Chapter', example: 1 })
-  @ApiResponse({
-    status: 200,
-    description: 'Chapter successfully restored',
-    type: BaseResponseDto<ChapterResponseDto>,
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Chapter not found or already active',
-  })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async RestoreChapter(@Param('id', ParseIntPipe) id: number) {
-    return this.chaptersService.restoreChapter(id);
+    return this.chaptersService.getAllChapterDeleted(paginationQueryDto);
   }
 
   @Patch('restore-multiple')
@@ -243,6 +166,83 @@ export class ChaptersController {
     return await this.chaptersService.changeChapterPositionMultiple(
       changeChapterPositionDtos,
     );
+  }
+
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Get Chapter detail',
+    description:
+      'Retrieve detailed information about a specific Chapter by its ID, including metadata and related information.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Unique identifier of the Chapter',
+    example: 1,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved Chapter details',
+    type: BaseResponseDto<ChapterResponseDto>,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid ID parameter or unsupported resource type',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Chapter not found or has been deleted',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  public async GetChapterDetail(@Param('id', ParseIntPipe) id: number) {
+    return this.chaptersService.getChapterDetail(id);
+  }
+
+  @Patch(':id')
+  @ApiOperation({
+    summary: 'Update a Chapter',
+    description: 'Update the details of an existing Chapter by its ID.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The ID of the Chapter',
+    example: 1,
+  })
+  @ApiBody({ type: UpdateChapterDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Chapter successfully updated',
+    type: BaseResponseDto<ChapterResponseDto>,
+  })
+  @ApiResponse({ status: 404, description: 'Chapter not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async UpdateChapter(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateChapterDto: UpdateChapterDto,
+  ) {
+    return this.chaptersService.updateChapter(id, updateChapterDto);
+  }
+
+  @Patch(':id/restore')
+  @ApiOperation({
+    summary: 'Restore a soft-deleted Chapter',
+    description: 'Restore a previously soft-deleted Chapter by its ID.',
+  })
+  @ApiParam({ name: 'id', description: 'ID of the Chapter', example: 1 })
+  @ApiResponse({
+    status: 200,
+    description: 'Chapter successfully restored',
+    type: BaseResponseDto<ChapterResponseDto>,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Chapter not found or already active',
+  })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async RestoreChapter(@Param('id', ParseIntPipe) id: number) {
+    return this.chaptersService.restoreChapter(id);
   }
 
   @Delete(':id/soft-delete')
