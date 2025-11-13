@@ -36,7 +36,7 @@ export class CategoryResponseDto {
 
   @ApiProperty({
     enum: CategoryStatus,
-    example: CategoryStatus.ACTIVE,
+    example: CategoryStatus.DRAFT,
     description: 'Status of the category (ACTIVE or INACTIVE)',
   })
   status: CategoryStatus;

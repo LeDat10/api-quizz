@@ -26,6 +26,7 @@ import { PaginationResponse } from 'src/common/pagination/dtos/pagination-respon
 import { BaseResponseDto } from 'src/common/response/dtos/base-response.dto';
 import { ChangeLessonStatusDto } from './dtos/change-lesson-status.dto';
 import { ChangeLessonPositionDto } from './dtos/change-lesson-position.dto';
+import { LessonStatus } from './enums/lesson.enum';
 
 @ApiTags('Lessons')
 @Controller('lesson')
@@ -249,6 +250,56 @@ export class LessonController {
     @Body() updateLessonDto: UpdateLessonDto,
   ) {
     return await this.lessonService.updateLesson(id, updateLessonDto);
+  }
+
+  @Patch(':id/status')
+  @ApiOperation({
+    summary: 'Update lesson status',
+    description:
+      'Change the status of a specific lesson by its ID. Status values include: DRAFT, ACTIVE, INACTIVE, ARCHIVED.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'The ID of the lesson to update.',
+    example: 1,
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        status: {
+          type: 'string',
+          enum: Object.values(LessonStatus),
+          example: 'draft',
+          description: 'New status of the lesson.',
+        },
+      },
+      required: ['status'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lesson status updated successfully.',
+    type: BaseResponseDto<LessonResponseDto>,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid status value or request body.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Lesson not found.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error.',
+  })
+  public async ChangeLessonStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('status') status: LessonStatus,
+  ) {
+    return await this.lessonService.changeLessonStatus(id, status);
   }
 
   @Patch(':id/restore')

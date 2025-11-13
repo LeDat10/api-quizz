@@ -51,8 +51,8 @@ export class CourseResponseDto {
 
   @ApiProperty({
     enum: CourseStatus,
-    example: CourseStatus.ACTIVE,
-    description: 'Status of the course (ACTIVE, INACTIVE, etc.)',
+    example: CourseStatus.DRAFT,
+    description: 'Status of the course',
   })
   status: CourseStatus;
 

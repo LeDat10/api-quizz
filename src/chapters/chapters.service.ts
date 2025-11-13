@@ -19,6 +19,7 @@ import { LoggerHelper } from 'src/common/helpers/logger/logger.helper';
 import { ErrorHandlerHelper } from 'src/common/helpers/error/handle-error.helper';
 import { ChangeChapterStatusDto } from './dtos/change-chapter-status.dto';
 import { ChangeChapterPositionDto } from './dtos/change-chapter-position.dto';
+import { ChapterStatus } from './enums/chapter.enum';
 
 @Injectable()
 export class ChaptersService {
@@ -571,6 +572,32 @@ export class ChaptersService {
       );
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async changeChapterStatus(id: number, status: ChapterStatus) {
+    const ctx = { method: 'changeChapterStatus', entity: this._entity };
+    this.logger.start(ctx);
+
+    try {
+      if (!id) {
+        const reason = 'Missing parameter id';
+        this.logger.warn(ctx, 'failed', reason);
+        throw new BadRequestException(
+          generateMessage('failed', this._entity, id, reason),
+        );
+      }
+
+      const chapter = await this.findChapterById(id);
+      chapter.status = status;
+      const record = await this.chapterRepository.save(chapter);
+      this.logger.success(ctx, 'updated');
+      return ResponseFactory.success<ChapterResponseDto>(
+        generateMessage('updated', this._entity, id),
+        ChapterResponseDto.fromEntity(record),
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity, id);
     }
   }
 }

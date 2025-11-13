@@ -25,6 +25,7 @@ import { CreateResourceLibraryDto } from './dtos/create-resource-library.dto';
 import { UpdateResourceLibraryDto } from './dtos/update-resource-library.dto';
 import { ChangeResourceLibraryPositionDto } from './dtos/change-resource-library-position.dto';
 import { ChangeResourceLibraryStatusDto } from './dtos/change-resource-library-status.dto';
+import { LibraryStatus } from './enums/resource-library.enum';
 
 @Controller('resource-library')
 export class ResourceLibraryController {
@@ -231,6 +232,56 @@ export class ResourceLibraryController {
       id,
       updateLibraryDto,
     );
+  }
+
+  @Patch(':id/status')
+  @ApiOperation({
+    summary: 'Update resource library status',
+    description:
+      'Change the status of a specific resource library by its ID. Status values include: DRAFT, ACTIVE, INACTIVE, ARCHIVED.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'The ID of the resource library to update.',
+    example: 1,
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        status: {
+          type: 'string',
+          enum: Object.values(LibraryStatus),
+          example: 'draft',
+          description: 'New status of the resource library.',
+        },
+      },
+      required: ['status'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Resource library status updated successfully.',
+    type: BaseResponseDto<ResourceLibraryResponseDto>,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid status value or request body.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Resource library not found.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error.',
+  })
+  public async ChangeLibraryStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() status: LibraryStatus,
+  ) {
+    return await this.resourceLibraryService.changeLibraryStatus(id, status);
   }
 
   @Patch(':id/restore')

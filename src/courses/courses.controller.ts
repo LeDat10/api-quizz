@@ -26,6 +26,7 @@ import { PaginationResponse } from 'src/common/pagination/dtos/pagination-respon
 import { BaseResponseDto } from 'src/common/response/dtos/base-response.dto';
 import { ChangeCourseStatusDto } from './dtos/change-course-status.dto';
 import { ChangeCoursePositionDto } from './dtos/change-course-position.dto';
+import { CourseStatus } from './enums/type-course.enum';
 
 @ApiTags('Courses')
 @Controller('courses')
@@ -222,6 +223,56 @@ export class CoursesController {
     @Body() updateCourseDto: UpdateCourseDto,
   ) {
     return await this.coursesService.updateCourse(updateCourseDto, id);
+  }
+
+  @Patch(':id/status')
+  @ApiOperation({
+    summary: 'Update course status',
+    description:
+      'Change the status of a specific course by its ID. Status values include: DRAFT, ACTIVE, INACTIVE, ARCHIVED.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'The ID of the course to update.',
+    example: 1,
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        status: {
+          type: 'string',
+          enum: Object.values(CourseStatus),
+          example: 'draft',
+          description: 'New status of the course.',
+        },
+      },
+      required: ['status'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Course status updated successfully.',
+    type: BaseResponseDto<CourseResponseDto>,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid status value or request body.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Course not found.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error.',
+  })
+  public async ChangeCourseStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('status') status: CourseStatus,
+  ) {
+    return await this.coursesService.changeCourseStatus(id, status);
   }
 
   @Patch(':id/restore')

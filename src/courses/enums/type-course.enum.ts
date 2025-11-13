@@ -4,7 +4,8 @@ export enum TypeCourse {
 }
 
 export enum CourseStatus {
-  ACTIVE = 'active',
+  DRAFT = 'draft',
+  PUBLISHED = 'published',
   INACTIVE = 'inactive',
-  LOCKED = 'locked',
+  ARCHIVED = 'archived',
 }

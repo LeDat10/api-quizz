@@ -1,4 +1,6 @@
 export enum ChapterStatus {
-  ACTIVE = 'active',
+  DRAFT = 'draft',
+  PUBLISHED = 'published',
   INACTIVE = 'inactive',
+  ARCHIVED = 'archived',
 }

@@ -18,6 +18,7 @@ import { generateRadomString, generateSlug } from 'src/common/utils/slug.util';
 import { UpdateResourceLibraryDto } from './dtos/update-resource-library.dto';
 import { ChangeResourceLibraryPositionDto } from './dtos/change-resource-library-position.dto';
 import { ChangeResourceLibraryStatusDto } from './dtos/change-resource-library-status.dto';
+import { LibraryStatus } from './enums/resource-library.enum';
 
 @Injectable()
 export class ResourceLibraryService {
@@ -510,6 +511,32 @@ export class ResourceLibraryService {
       );
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async changeLibraryStatus(id: number, status: LibraryStatus) {
+    const ctx = { method: 'changeLibraryStatus', entity: this._entity };
+    this.logger.start(ctx);
+
+    try {
+      if (!id) {
+        const reason = 'Missing parameter id';
+        this.logger.warn(ctx, 'failed', reason);
+        throw new BadRequestException(
+          generateMessage('failed', this._entity, id, reason),
+        );
+      }
+
+      const library = await this.findResourceLibraryById(id);
+      library.status = status;
+      const record = await this.resourceLibraryRepository.save(library);
+      this.logger.success(ctx, 'updated');
+      return ResponseFactory.success<ResourceLibraryResponseDto>(
+        generateMessage('updated', this._entity, id),
+        ResourceLibraryResponseDto.fromEntity(record),
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity, id);
     }
   }
 }

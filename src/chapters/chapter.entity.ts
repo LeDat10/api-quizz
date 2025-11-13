@@ -32,7 +32,7 @@ export class Chapter {
   @Column({
     type: 'enum',
     enum: ChapterStatus,
-    default: ChapterStatus.ACTIVE,
+    default: ChapterStatus.DRAFT,
   })
   status: ChapterStatus;
 

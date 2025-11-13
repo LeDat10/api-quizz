@@ -36,7 +36,7 @@ export class ChapterResponseDto {
 
   @ApiProperty({
     enum: ChapterStatus,
-    example: ChapterStatus.ACTIVE,
+    example: ChapterStatus.DRAFT,
     description: 'Current status of the chapter',
   })
   status: ChapterStatus;

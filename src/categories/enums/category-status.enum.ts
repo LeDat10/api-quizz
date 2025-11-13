@@ -1,4 +1,6 @@
 export enum CategoryStatus {
-  ACTIVE = 'active',
+  DRAFT = 'draft',
+  PUBLISHED = 'published',
   INACTIVE = 'inactive',
+  ARCHIVED = 'archived',
 }

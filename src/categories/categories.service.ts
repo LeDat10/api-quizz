@@ -18,6 +18,7 @@ import { generateMessage } from 'src/common/utils/generateMessage.util';
 import { ErrorHandlerHelper } from 'src/common/helpers/error/handle-error.helper';
 import { ChangeCategoryStatusDto } from './dtos/change-category-status.dto';
 import { ChangeCategoryPositionDto } from './dtos/change-category-position.dto';
+import { CategoryStatus } from './enums/category-status.enum';
 
 @Injectable()
 export class CategoriesService {
@@ -538,6 +539,32 @@ export class CategoriesService {
       );
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async changeCategoryStatus(id: number, status: CategoryStatus) {
+    const ctx = { method: 'changeCategoryStatus', entity: this._entity };
+    this.logger.start(ctx);
+
+    try {
+      if (!id) {
+        const reason = 'Missing parameter id';
+        this.logger.warn(ctx, 'failed', reason);
+        throw new BadRequestException(
+          generateMessage('failed', this._entity, id, reason),
+        );
+      }
+
+      const category = await this.findCategoryById(id);
+      category.status = status;
+      const record = await this.categoryRepository.save(category);
+      this.logger.success(ctx, 'updated');
+      return ResponseFactory.success<CategoryResponseDto>(
+        generateMessage('updated', this._entity, id),
+        CategoryResponseDto.fromEntity(record),
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity, id);
     }
   }
 }

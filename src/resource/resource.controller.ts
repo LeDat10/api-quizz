@@ -27,6 +27,7 @@ import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.
 import { PaginationResponse } from 'src/common/pagination/dtos/pagination-response.dto';
 import { ChangeResourcePositionDto } from './dtos/change-resource-position.dto';
 import { ChangeResourceStatusDto } from './dtos/chang-resource-status.dto';
+import { ResourceStatus } from './enums/resource-type.enum';
 
 @ApiTags('Resources')
 @Controller('resource')
@@ -175,6 +176,55 @@ export class ResourceController {
     return await this.resourceService.restorePdfResourceMultiple(ids);
   }
 
+  @Patch(':id/status')
+  @ApiOperation({
+    summary: 'Update resource status',
+    description:
+      'Change the status of a specific resource by its ID. Status values include: DRAFT, ACTIVE, INACTIVE, ARCHIVED.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'The ID of the resource to update.',
+    example: 1,
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        status: {
+          type: 'string',
+          enum: Object.values(ResourceStatus),
+          example: 'draft',
+          description: 'New status of the resource.',
+        },
+      },
+      required: ['status'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Resource status updated successfully.',
+    type: BaseResponseDto<ResourceResponseDto>,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid status value or request body.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Resource not found.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error.',
+  })
+  public async changeResourceStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('status') status: ResourceStatus,
+  ) {
+    return await this.resourceService.changeResourceStatus(id, status);
+  }
   @Get('pdf/:id')
   @ApiOperation({
     summary: 'Get PDF resource detail',

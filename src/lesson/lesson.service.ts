@@ -19,6 +19,7 @@ import { LoggerHelper } from 'src/common/helpers/logger/logger.helper';
 import { ErrorHandlerHelper } from 'src/common/helpers/error/handle-error.helper';
 import { ChangeLessonStatusDto } from './dtos/change-lesson-status.dto';
 import { ChangeLessonPositionDto } from './dtos/change-lesson-position.dto';
+import { LessonStatus } from './enums/lesson.enum';
 
 @Injectable()
 export class LessonService {
@@ -559,6 +560,32 @@ export class LessonService {
       );
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async changeLessonStatus(id: number, status: LessonStatus) {
+    const ctx = { method: 'changeLessonStatus', entity: this._entity };
+    this.logger.start(ctx);
+
+    try {
+      if (!id) {
+        const reason = 'Missing parameter id';
+        this.logger.warn(ctx, 'failed', reason);
+        throw new BadRequestException(
+          generateMessage('failed', this._entity, id, reason),
+        );
+      }
+
+      const lesson = await this.findLessonById(id);
+      lesson.lessonStatus = status;
+      const record = await this.lessonRepository.save(lesson);
+      this.logger.success(ctx, 'updated');
+      return ResponseFactory.success<LessonResponseDto>(
+        generateMessage('updated', this._entity, id),
+        LessonResponseDto.fromEntity(record),
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity, id);
     }
   }
 }

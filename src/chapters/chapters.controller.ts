@@ -26,6 +26,7 @@ import { PaginationResponse } from 'src/common/pagination/dtos/pagination-respon
 import { BaseResponseDto } from 'src/common/response/dtos/base-response.dto';
 import { ChangeChapterStatusDto } from './dtos/change-chapter-status.dto';
 import { ChangeChapterPositionDto } from './dtos/change-chapter-position.dto';
+import { ChapterStatus } from './enums/chapter.enum';
 
 @ApiTags('Chapters')
 @Controller('chapters')
@@ -223,6 +224,56 @@ export class ChaptersController {
     @Body() updateChapterDto: UpdateChapterDto,
   ) {
     return this.chaptersService.updateChapter(id, updateChapterDto);
+  }
+
+  @Patch(':id/status')
+  @ApiOperation({
+    summary: 'Update chapter status',
+    description:
+      'Change the status of a specific chapter by its ID. Status values include: DRAFT, ACTIVE, INACTIVE, ARCHIVED.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'The ID of the chapter to update.',
+    example: 1,
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        status: {
+          type: 'string',
+          enum: Object.values(ChapterStatus),
+          example: 'draft',
+          description: 'New status of the chapter.',
+        },
+      },
+      required: ['status'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Chapter status updated successfully.',
+    type: BaseResponseDto<ChapterResponseDto>,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid status value or request body.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Chapter not found.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error.',
+  })
+  public async ChangeChapterStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('status') status: ChapterStatus,
+  ) {
+    await this.chaptersService.changeChapterStatus(id, status);
   }
 
   @Patch(':id/restore')

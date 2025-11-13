@@ -25,6 +25,7 @@ import { BaseResponseDto } from 'src/common/response/dtos/base-response.dto';
 import { PaginationResponse } from 'src/common/pagination/dtos/pagination-response.dto';
 import { ChangeCategoryStatusDto } from './dtos/change-category-status.dto';
 import { ChangeCategoryPositionDto } from './dtos/change-category-position.dto';
+import { CategoryStatus } from './enums/category-status.enum';
 
 @Controller('categories')
 export class CategoriesController {
@@ -228,6 +229,56 @@ export class CategoriesController {
       id,
       updateCategoryDto,
     );
+  }
+
+  @Patch(':id/status')
+  @ApiOperation({
+    summary: 'Update category status',
+    description:
+      'Change the status of a specific category by its ID. Status values include: DRAFT, ACTIVE, INACTIVE, ARCHIVED.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'The ID of the category to update.',
+    example: 1,
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        status: {
+          type: 'string',
+          enum: Object.values(CategoryStatus),
+          example: 'draft',
+          description: 'New status of the category.',
+        },
+      },
+      required: ['status'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Category status updated successfully.',
+    type: BaseResponseDto<CategoryResponseDto>,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid status value or request body.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Category not found.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error.',
+  })
+  public async ChangeCategoryStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('status') status: CategoryStatus,
+  ) {
+    return await this.cateogriesService.changeCategoryStatus(id, status);
   }
 
   @Patch(':id/restore')
