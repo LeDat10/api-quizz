@@ -11,7 +11,10 @@ import { ResourceLibraryService } from 'src/resource-library/resource-library.se
 import { LoggerHelper } from 'src/common/helpers/logger/logger.helper';
 import { ErrorHandlerHelper } from 'src/common/helpers/error/handle-error.helper';
 import { Resource } from './entities/resource.entity';
-import { generateRadomString, generateSlug } from 'src/common/utils/slug.util';
+import {
+  generateRadomString,
+  generateSlug,
+} from 'src/common/utils/course.util';
 import { ResourceStatus, ResourceType } from './enums/resource-type.enum';
 import { VideoResource } from './entities/video-resource.entity';
 import { CreatePdfResourceDto } from './dtos/create-pdf-resource.dto';

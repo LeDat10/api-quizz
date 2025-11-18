@@ -7,7 +7,10 @@ import { In, IsNull, Not, Repository } from 'typeorm';
 import { Category } from './category.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateCategoryDto } from './dtos/create-category.dto';
-import { generateRadomString, generateSlug } from 'src/common/utils/slug.util';
+import {
+  generateRadomString,
+  generateSlug,
+} from 'src/common/utils/course.util';
 import { UpdateCategoryDto } from './dtos/update-category.dto';
 import { CategoryResponseDto } from './dtos/category-response.dto';
 import { PaginationProvider } from 'src/common/pagination/pagination.provider';

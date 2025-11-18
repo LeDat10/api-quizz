@@ -12,6 +12,7 @@ export class CourseResponseDto {
     this.status = entity.status;
     this.position = entity.position;
     this.slug = entity.slug;
+    this.courseCode = entity.courseCode;
     this.categoryId = entity.category?.id;
     this.createdAt = entity.createdAt;
     this.updatedAt = entity.updatedAt;
@@ -67,6 +68,9 @@ export class CourseResponseDto {
     description: 'SEO-friendly slug of the course',
   })
   slug: string;
+
+  @ApiProperty()
+  courseCode: string;
 
   @ApiProperty()
   categoryId: number;

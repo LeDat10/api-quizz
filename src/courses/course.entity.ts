@@ -62,6 +62,13 @@ export class Course {
   })
   slug: string;
 
+  @Column({
+    nullable: false,
+    unique: true,
+    type: 'varchar',
+  })
+  courseCode: string;
+
   @ManyToOne(() => Category, (category) => category.courses, {
     onDelete: 'RESTRICT',
   })

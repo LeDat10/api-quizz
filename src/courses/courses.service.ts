@@ -8,7 +8,11 @@ import { Course } from './course.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateCourseDto } from './dtos/create-course.dto';
 import { CategoriesService } from 'src/categories/categories.service';
-import { generateRadomString, generateSlug } from 'src/common/utils/slug.util';
+import {
+  generateRadomString,
+  generateRadomUppercaseString,
+  generateSlug,
+} from 'src/common/utils/course.util';
 import { UpdateCourseDto } from './dtos/update-course.dto';
 import { CourseResponseDto } from './dtos/course-response.dto';
 import { ResponseFactory } from 'src/common/response/factories/response.factory';
@@ -43,6 +47,7 @@ export class CoursesService {
     status: course.status,
     position: course.position,
     slug: course.slug,
+    courseCode: course.courseCode,
     categoryId: course.category?.id,
     createdAt: course.createdAt,
     updatedAt: course.updatedAt,
@@ -142,11 +147,14 @@ export class CoursesService {
         slug = `${slug}-${generateRadomString()}`;
       }
 
+      const courseCode = generateRadomUppercaseString();
+
       // Create and save
       const course = this.coursesRepository.create({
         ...createCourseDto,
         category,
         slug,
+        courseCode,
       });
 
       const courseCreated = await this.coursesRepository.save(course);

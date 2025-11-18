@@ -9,7 +9,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ChapterResponseDto } from './dtos/chapter-response.dto';
 import { CreateChapterDto } from './dtos/creater-chapter.dto';
 import { CoursesService } from 'src/courses/courses.service';
-import { generateRadomString, generateSlug } from 'src/common/utils/slug.util';
+import {
+  generateRadomString,
+  generateSlug,
+} from 'src/common/utils/course.util';
 import { UpdateChapterDto } from './dtos/update-chapter.dto';
 import { PaginationProvider } from 'src/common/pagination/pagination.provider';
 import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';

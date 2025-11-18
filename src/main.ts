@@ -18,6 +18,12 @@ async function bootstrap() {
     }),
   );
 
+  // Enable CORS
+  app.enableCors({
+    origin: 'http://localhost:4200', // Your Angular app URL
+    credentials: true,
+  });
+
   const config = new DocumentBuilder()
     .setTitle('Quizz App')
     .setDescription('The Quizz App API description')

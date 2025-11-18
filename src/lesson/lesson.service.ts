@@ -9,7 +9,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { LessonResponseDto } from './dtos/lesson-response.dto';
 import { CreateLessonDto } from './dtos/create-lesson.dto';
 import { ChaptersService } from 'src/chapters/chapters.service';
-import { generateRadomString, generateSlug } from 'src/common/utils/slug.util';
+import {
+  generateRadomString,
+  generateSlug,
+} from 'src/common/utils/course.util';
 import { UpdateLessonDto } from './dtos/update-lesson.dto';
 import { generateMessage } from 'src/common/utils/generateMessage.util';
 import { ResponseFactory } from 'src/common/response/factories/response.factory';

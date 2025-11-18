@@ -14,7 +14,10 @@ import { PaginationProvider } from 'src/common/pagination/pagination.provider';
 import { ResourceLibraryResponseDto } from './dtos/resource-library-response.dto';
 import { ResponseFactory } from 'src/common/response/factories/response.factory';
 import { CreateResourceLibraryDto } from './dtos/create-resource-library.dto';
-import { generateRadomString, generateSlug } from 'src/common/utils/slug.util';
+import {
+  generateRadomString,
+  generateSlug,
+} from 'src/common/utils/course.util';
 import { UpdateResourceLibraryDto } from './dtos/update-resource-library.dto';
 import { ChangeResourceLibraryPositionDto } from './dtos/change-resource-library-position.dto';
 import { ChangeResourceLibraryStatusDto } from './dtos/change-resource-library-status.dto';
