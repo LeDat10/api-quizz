@@ -10,7 +10,7 @@ export type Action =
 export function generateMessage(
   action: Action,
   entity: string,
-  id?: number,
+  id?: number | string,
   reason?: string,
 ) {
   const entityText = id ? `${entity} with ID ${id}` : entity;

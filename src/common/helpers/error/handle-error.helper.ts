@@ -32,7 +32,7 @@ export class ErrorHandlerHelper {
    * @param entity - the related entity name
    * @param id - entity id (if any)
    */
-  handle(ctx: any, error: any, entity: string, id?: number): never {
+  handle(ctx: any, error: any, entity: string, id?: number | string): never {
     // Case of HttpException (already provided by Nest)
     if (error instanceof HttpException) {
       this.logger.fail(ctx, error.message, 'failed', error.stack);
