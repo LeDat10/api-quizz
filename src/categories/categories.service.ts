@@ -570,4 +570,40 @@ export class CategoriesService {
       return this.errorHandler.handle(ctx, error, this._entity, id);
     }
   }
+
+  public async getAllCategoriesForDropdown() {
+    const ctx = {
+      method: 'getAllCategoriesForDropdown',
+      entity: this._entity,
+    };
+    this.logger.start(ctx);
+    try {
+      const categories = await this.categoryRepository.find({
+        where: {
+          status: CategoryStatus.PUBLISHED,
+        },
+        order: { position: 'DESC' },
+      });
+
+      if (!(categories.length > 0) && !categories) {
+        this.logger.warn(ctx, 'fetched');
+        throw new NotFoundException(
+          generateMessage('fetched', this._entity, undefined, 'Not found'),
+        );
+      }
+
+      const records = categories.map((category) => ({
+        id: category.id,
+        title: category.title,
+      }));
+
+      this.logger.success(ctx, 'fetched');
+      return ResponseFactory.success(
+        'Get all categories for dropdown has been successfully.',
+        records,
+      );
+    } catch (error) {
+      this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
 }

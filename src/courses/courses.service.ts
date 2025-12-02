@@ -24,6 +24,7 @@ import { ErrorHandlerHelper } from 'src/common/helpers/error/handle-error.helper
 import { ChangeCourseStatusDto } from './dtos/change-course-status.dto';
 import { ChangeCoursePositionDto } from './dtos/change-course-position.dto';
 import { CourseStatus } from './enums/type-course.enum';
+import { CategoryResponseDto } from 'src/categories/dtos/category-response.dto';
 
 @Injectable()
 export class CoursesService {
@@ -48,7 +49,9 @@ export class CoursesService {
     position: course.position,
     slug: course.slug,
     courseCode: course.courseCode,
-    categoryId: course.category?.id,
+    category: course.category
+      ? CategoryResponseDto.fromEntity(course.category)
+      : null,
     createdAt: course.createdAt,
     updatedAt: course.updatedAt,
     deletedAt: course.deletedAt,
@@ -205,12 +208,18 @@ export class CoursesService {
       const course = await this.findCourseById(id);
 
       // Update category if provided
-      if (updateCourseDto.categoryId) {
+      if (
+        updateCourseDto.categoryId === null ||
+        updateCourseDto === undefined
+      ) {
+        course.category = null;
+      } else if (updateCourseDto.categoryId) {
         this.logger.debug(
           ctx,
           'start',
           `Looking for category ID: ${updateCourseDto.categoryId}`,
         );
+
         const category = await this.categoriesService.findCategoryById(
           updateCourseDto.categoryId,
         );

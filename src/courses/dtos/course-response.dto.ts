@@ -1,3 +1,4 @@
+import { CategoryResponseDto } from 'src/categories/dtos/category-response.dto';
 import { Course } from '../course.entity';
 import { CourseStatus, TypeCourse } from '../enums/type-course.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -13,7 +14,9 @@ export class CourseResponseDto {
     this.position = entity.position;
     this.slug = entity.slug;
     this.courseCode = entity.courseCode;
-    this.categoryId = entity.category?.id;
+    this.category = entity.category
+      ? CategoryResponseDto.fromEntity(entity.category)
+      : null;
     this.createdAt = entity.createdAt;
     this.updatedAt = entity.updatedAt;
     this.deletedAt = entity.createdAt;
@@ -72,8 +75,8 @@ export class CourseResponseDto {
   @ApiProperty()
   courseCode: string;
 
-  @ApiProperty()
-  categoryId: number;
+  @ApiPropertyOptional({ type: () => CategoryResponseDto })
+  category: CategoryResponseDto | null;
 
   @ApiProperty()
   createdAt: Date;

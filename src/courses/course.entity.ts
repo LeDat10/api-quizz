@@ -71,8 +71,9 @@ export class Course {
 
   @ManyToOne(() => Category, (category) => category.courses, {
     onDelete: 'RESTRICT',
+    nullable: true,
   })
-  category: Category;
+  category?: Category | null;
 
   @OneToMany(() => Chapter, (chapter) => chapter.course)
   chapters: Chapter[];

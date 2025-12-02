@@ -83,6 +83,22 @@ export class CategoriesController {
     return await this.cateogriesService.createCategory(createCategoryDto);
   }
 
+  @Get('dropdown')
+  @ApiOperation({ summary: 'Get all categories for dropdown' })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully fetched categories',
+    type: [BaseResponseDto<{ id: string | number; status: CategoryStatus }>],
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'No published categories found',
+  })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  public async GetAllCategoriesForDropdown() {
+    return await this.cateogriesService.getAllCategoriesForDropdown();
+  }
+
   @Get('deleted')
   @ApiOperation({
     summary: 'Get all deleted categories',
@@ -142,7 +158,7 @@ export class CategoriesController {
   @ApiResponse({ status: 400, description: 'Invalid request data' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   public async ChangeCategoryStatusMultiple(
-    changeCategoryStatusDto: ChangeCategoryStatusDto,
+    @Body() changeCategoryStatusDto: ChangeCategoryStatusDto,
   ) {
     return await this.cateogriesService.changeCategoryStatusMultiple(
       changeCategoryStatusDto,
@@ -160,7 +176,7 @@ export class CategoriesController {
   @ApiResponse({ status: 400, description: 'Invalid request data' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   public async ChangeCategoryPositionMultiple(
-    changeCategoryPositionDtos: ChangeCategoryPositionDto[],
+    @Body() changeCategoryPositionDtos: ChangeCategoryPositionDto[],
   ) {
     return await this.cateogriesService.changeCategoryPositionMultiple(
       changeCategoryPositionDtos,
