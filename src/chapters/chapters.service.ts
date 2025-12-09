@@ -23,6 +23,7 @@ import { ErrorHandlerHelper } from 'src/common/helpers/error/handle-error.helper
 import { ChangeChapterStatusDto } from './dtos/change-chapter-status.dto';
 import { ChangeChapterPositionDto } from './dtos/change-chapter-position.dto';
 import { ChapterStatus } from './enums/chapter.enum';
+import { LessonResponseDto } from 'src/lesson/dtos/lesson-response.dto';
 
 @Injectable()
 export class ChaptersService {
@@ -44,6 +45,7 @@ export class ChaptersService {
     position: chapter.position,
     slug: chapter.slug,
     courseId: chapter.course?.id,
+    lessons: LessonResponseDto.fromEntities(chapter.lessons),
     createdAt: chapter.createdAt,
     updatedAt: chapter.updatedAt,
     deletedAt: chapter.deletedAt,
@@ -64,7 +66,7 @@ export class ChaptersService {
 
       const chapter = await this.chapterRepository.findOne({
         where: { id },
-        relations: ['course'],
+        relations: ['course', 'lessons'],
       });
 
       if (!chapter) {
@@ -94,7 +96,7 @@ export class ChaptersService {
         ChapterResponseDto
       >(paginationQueryDto, this.chapterRepository, this.transform, {
         order: { position: 'ASC' },
-        relations: ['course'],
+        relations: ['course', 'lessons'],
       });
 
       if (!chapters.data.length) {
@@ -272,7 +274,6 @@ export class ChaptersService {
   public async getAllChapterDeleted(paginationQueryDto: PaginationQueryDto) {
     const ctx = { method: 'getAllChapterDeleted', entity: this._entity };
     this.logger.start(ctx);
-
     try {
       const chaptersDeleted = await this.paginationProvider.paginateQuery<
         Chapter,
@@ -282,16 +283,14 @@ export class ChaptersService {
         where: {
           deletedAt: Not(IsNull()),
         },
-        relations: ['course'],
+        relations: ['course', 'lessons'],
         order: { position: 'ASC' },
       });
-
       if (!chaptersDeleted.data.length) {
         this.logger.warn(ctx, 'fetched', 'No deleted chapters found');
       } else {
         this.logger.success(ctx, 'fetched');
       }
-
       return chaptersDeleted;
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity);
@@ -364,7 +363,7 @@ export class ChaptersService {
       const chapter = await this.chapterRepository.findOne({
         withDeleted: true,
         where: { id, deletedAt: Not(IsNull()) },
-        relations: ['course'],
+        relations: ['course', 'lessons'],
       });
 
       if (!chapter) {
@@ -461,7 +460,7 @@ export class ChaptersService {
 
       const chapters = await this.chapterRepository.find({
         where: { id: In(ids) },
-        relations: ['course'],
+        relations: ['course', 'lessons'],
       });
 
       if (!chapters.length) {
@@ -509,7 +508,7 @@ export class ChaptersService {
       await this.chapterRepository.save(chapters);
       const records = await this.chapterRepository.find({
         where: { id: In(ids) },
-        relations: ['course'],
+        relations: ['course', 'lessons'],
       });
       this.logger.success(ctx, 'updated');
       return ResponseFactory.success<ChapterResponseDto[]>(
@@ -566,7 +565,7 @@ export class ChaptersService {
       await this.chapterRepository.save(chapters);
       const records = await this.chapterRepository.find({
         where: { id: In(ids) },
-        relations: ['course'],
+        relations: ['course', 'lessons'],
       });
       this.logger.success(ctx, 'updated');
       return ResponseFactory.success<ChapterResponseDto[]>(
@@ -601,6 +600,44 @@ export class ChaptersService {
       );
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity, id);
+    }
+  }
+
+  public async getChaptersByCourseId(courseId: number) {
+    const ctx = { method: 'getChaptersByCourseId', entity: this._entity };
+    this.logger.start(ctx);
+    try {
+      if (!courseId) {
+        const reason = 'Missing parameter courseId';
+        this.logger.warn(ctx, 'failed', reason);
+        throw new BadRequestException(
+          generateMessage('failed', this._entity, undefined, reason),
+        );
+      }
+
+      const course = await this.coursesService.findCourseById(courseId);
+
+      if (!course) {
+        const reason = `Can not found course by ${courseId}`;
+        this.logger.fail(ctx, reason, 'fetched');
+        throw new NotFoundException(
+          generateMessage('failed', this._entity, undefined, reason),
+        );
+      }
+
+      const chapters = await this.chapterRepository.find({
+        where: { course },
+        order: { position: 'asc' },
+        relations: ['course', 'lessons'],
+      });
+
+      this.logger.success(ctx, 'fetched');
+      return ResponseFactory.success<ChapterResponseDto[]>(
+        generateMessage('fetched', this._entity),
+        ChapterResponseDto.fromEntities(chapters),
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
     }
   }
 }

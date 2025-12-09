@@ -143,7 +143,7 @@ export class CoursesController {
   @ApiResponse({ status: 400, description: 'Invalid request data' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   public async ChangeCourseStatusMultiple(
-    changeCourseStatusDto: ChangeCourseStatusDto,
+    @Body() changeCourseStatusDto: ChangeCourseStatusDto,
   ) {
     return await this.coursesService.changeCourseStatusMultiple(
       changeCourseStatusDto,
@@ -161,7 +161,7 @@ export class CoursesController {
   @ApiResponse({ status: 400, description: 'Invalid request data' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   public async ChangeCoursePositionMulitple(
-    changeCoursePositionDtos: ChangeCoursePositionDto[],
+    @Body() changeCoursePositionDtos: ChangeCoursePositionDto[],
   ) {
     return await this.coursesService.changeCoursePositionMultiple(
       changeCoursePositionDtos,
