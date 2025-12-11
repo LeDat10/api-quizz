@@ -29,6 +29,7 @@ import { ChangeLessonStatusDto } from './dtos/change-lesson-status.dto';
 import { ChangeLessonPositionDto } from './dtos/change-lesson-position.dto';
 import { LessonStatus } from './enums/lesson.enum';
 import { CreateLessonWithContentDto } from './dtos/create-lesson-with-content.dto';
+import { UdpateLessonWithContentDto } from './dtos/update-lesson-with-content.dto';
 
 @ApiTags('Lessons')
 @Controller('lesson')
@@ -269,43 +270,102 @@ export class LessonController {
     return await this.lessonService.getDetailLesson(id);
   }
 
-  @Patch(':id')
+  // @Patch(':id')
+  // @ApiOperation({
+  //   summary: 'Update an existing lesson',
+  //   description:
+  //     'Update lesson information such as title, type, status, or position.',
+  // })
+  // @ApiParam({
+  //   name: 'id',
+  //   type: Number,
+  //   example: 1,
+  //   description: 'Lesson ID to update',
+  // })
+  // @ApiBody({
+  //   type: UpdateLessonDto,
+  //   examples: {
+  //     example1: {
+  //       summary: 'Example payload',
+  //       value: {
+  //         title: 'Updated React Basics',
+  //         lessonStatus: 'draft',
+  //         chapterId: 3,
+  //       },
+  //     },
+  //   },
+  // })
+  // @ApiResponse({
+  //   status: 200,
+  //   description: 'Lesson updated successfully.',
+  //   type: BaseResponseDto<LessonResponseDto>,
+  // })
+  // @ApiResponse({ status: 404, description: 'Lesson not found.' })
+  // @ApiResponse({ status: 500, description: 'Internal server error' })
+  // public async UpdateLesson(
+  //   @Param('id', ParseIntPipe) id: number,
+  //   @Body() updateLessonDto: UpdateLessonDto,
+  // ) {
+  //   return await this.lessonService.updateLesson(id, updateLessonDto);
+  // }
+
+  @Patch(':id/content')
   @ApiOperation({
-    summary: 'Update an existing lesson',
+    summary: 'Update lesson content',
     description:
-      'Update lesson information such as title, type, status, or position.',
+      'Update an existing lesson and optionally update its associated content.',
   })
   @ApiParam({
     name: 'id',
-    type: Number,
-    example: 1,
-    description: 'Lesson ID to update',
+    required: true,
+    description: 'ID of the lesson to update',
+    example: 12,
   })
   @ApiBody({
-    type: UpdateLessonDto,
+    type: UdpateLessonWithContentDto,
     examples: {
       example1: {
-        summary: 'Example payload',
+        summary: 'Update lesson title and content',
         value: {
-          title: 'Updated React Basics',
-          lessonStatus: 'draft',
+          title: 'Updated introduction to React',
+          lessonStatus: 'published',
           chapterId: 3,
+          content: '<p>Updated React content</p>',
+        },
+      },
+      example2: {
+        summary: 'Update only content',
+        value: {
+          content: '<p>New content only</p>',
         },
       },
     },
   })
   @ApiResponse({
     status: 200,
-    description: 'Lesson updated successfully.',
+    description: 'Lesson content updated successfully.',
     type: BaseResponseDto<LessonResponseDto>,
   })
-  @ApiResponse({ status: 404, description: 'Lesson not found.' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async UpdateLesson(
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input or missing required fields.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Lesson not found.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error.',
+  })
+  public async UpdateLessonContent(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateLessonDto: UpdateLessonDto,
+    @Body() updateLessonContentDto: UdpateLessonWithContentDto,
   ) {
-    return await this.lessonService.updateLesson(id, updateLessonDto);
+    return await this.lessonService.updateLessonWithContent(
+      id,
+      updateLessonContentDto,
+    );
   }
 
   @Patch(':id/status')

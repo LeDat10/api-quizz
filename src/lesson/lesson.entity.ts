@@ -60,7 +60,9 @@ export class Lesson {
   })
   resources: Resource[];
 
-  @OneToOne(() => ContentLesson, (contentLesson) => contentLesson.lesson)
+  @OneToOne(() => ContentLesson, (contentLesson) => contentLesson.lesson, {
+    nullable: true,
+  })
   contentLesson: ContentLesson;
 
   @CreateDateColumn()

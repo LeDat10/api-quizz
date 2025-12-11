@@ -10,7 +10,6 @@ export class CreateLessonWithContentDto extends BaseCreateLessonDto {
   })
   @IsString()
   @IsNotEmpty()
-  @Trim()
   @IsNotBlank()
   content: string;
 }

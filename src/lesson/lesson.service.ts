@@ -27,7 +27,6 @@ import { CreateLessonWithContentDto } from './dtos/create-lesson-with-content.dt
 import { ContentLessonResponseDto } from 'src/content-lesson/dtos/content-lesson-response.dto';
 import { BaseUpdateLessonDto } from './dtos/base-update-lesson.dto';
 import { UdpateLessonWithContentDto } from './dtos/update-lesson-with-content.dto';
-import { UpdateLessonDto } from './dtos/update-lesson.dto';
 
 @Injectable()
 export class LessonService {
@@ -46,13 +45,15 @@ export class LessonService {
   private transform = (lesson: Lesson) => {
     let data: ContentLessonResponseDto | null = null;
 
-    switch (lesson.lessonType) {
-      case LessonType.CONTENT:
-        data = ContentLessonResponseDto.fromEntity(lesson.contentLesson);
-        break;
+    if (lesson.contentLesson) {
+      switch (lesson.lessonType) {
+        case LessonType.CONTENT:
+          data = ContentLessonResponseDto.fromEntity(lesson.contentLesson);
+          break;
 
-      default:
-        break;
+        default:
+          break;
+      }
     }
     return {
       id: lesson.id,
@@ -126,7 +127,7 @@ export class LessonService {
         LessonResponseDto
       >(paginationQueryDto, this.lessonRepository, this.transform, {
         order: { position: 'ASC' },
-        relations: ['chapter'],
+        relations: ['chapter', 'contentLesson'],
       });
 
       this.logger.success(ctx, 'fetched');
@@ -251,7 +252,7 @@ export class LessonService {
     }
   }
 
-  public async updateLesson(id: number, updateLessonDto: UpdateLessonDto) {
+  public async updateLesson(id: number, updateLessonDto: BaseUpdateLessonDto) {
     const ctx = { method: 'updateLesson', entity: this._entity, id };
     this.logger.start(ctx);
 
@@ -316,12 +317,35 @@ export class LessonService {
       Object.assign(lesson, updateLessonDto);
       await this.lessonRepository.save(lesson);
       const lessonUpdated = await this.findLessonById(id);
-      const lessonUpdatedResponse = LessonResponseDto.fromEntity(lessonUpdated);
       this.logger.success(ctx, 'updated');
 
+      return lessonUpdated;
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity, id);
+    }
+  }
+
+  public async updateLessonWithContent(
+    id: number,
+    updateLessonContentDto: UdpateLessonWithContentDto,
+  ) {
+    const ctx = { method: 'updateLessonWithContent', entity: this._entity, id };
+    this.logger.start(ctx);
+    try {
+      const lesson = await this.updateLesson(id, updateLessonContentDto);
+      if (updateLessonContentDto.content) {
+        const contentLesson =
+          await this.contentLessonService.updateContentLesson({
+            id: lesson.contentLesson.id,
+            content: updateLessonContentDto.content,
+          });
+        lesson.contentLesson = contentLesson;
+      }
+
+      this.logger.success(ctx, 'updated');
       return ResponseFactory.success<LessonResponseDto>(
         generateMessage('updated', this._entity, id),
-        lessonUpdatedResponse,
+        LessonResponseDto.fromEntity(lesson),
       );
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity, id);
