@@ -7,13 +7,11 @@ import { In, IsNull, Not, Repository } from 'typeorm';
 import { Lesson } from './lesson.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessonResponseDto } from './dtos/lesson-response.dto';
-import { CreateLessonDto } from './dtos/create-lesson.dto';
 import { ChaptersService } from 'src/chapters/chapters.service';
 import {
   generateRadomString,
   generateSlug,
 } from 'src/common/utils/course.util';
-import { UpdateLessonDto } from './dtos/update-lesson.dto';
 import { generateMessage } from 'src/common/utils/generateMessage.util';
 import { ResponseFactory } from 'src/common/response/factories/response.factory';
 import { PaginationProvider } from 'src/common/pagination/pagination.provider';
@@ -22,7 +20,14 @@ import { LoggerHelper } from 'src/common/helpers/logger/logger.helper';
 import { ErrorHandlerHelper } from 'src/common/helpers/error/handle-error.helper';
 import { ChangeLessonStatusDto } from './dtos/change-lesson-status.dto';
 import { ChangeLessonPositionDto } from './dtos/change-lesson-position.dto';
-import { LessonStatus } from './enums/lesson.enum';
+import { LessonStatus, LessonType } from './enums/lesson.enum';
+import { ContentLessonService } from 'src/content-lesson/content-lesson.service';
+import { BaseCreateLessonDto } from './dtos/base-create-lesson.dto';
+import { CreateLessonWithContentDto } from './dtos/create-lesson-with-content.dto';
+import { ContentLessonResponseDto } from 'src/content-lesson/dtos/content-lesson-response.dto';
+import { BaseUpdateLessonDto } from './dtos/base-update-lesson.dto';
+import { UdpateLessonWithContentDto } from './dtos/update-lesson-with-content.dto';
+import { UpdateLessonDto } from './dtos/update-lesson.dto';
 
 @Injectable()
 export class LessonService {
@@ -35,20 +40,34 @@ export class LessonService {
     private readonly lessonRepository: Repository<Lesson>,
     private readonly chapterService: ChaptersService,
     private readonly paginationProvider: PaginationProvider,
+    private readonly contentLessonService: ContentLessonService,
   ) {}
 
-  private transform = (lesson: Lesson) => ({
-    id: lesson.id,
-    title: lesson.title,
-    lessonType: lesson.lessonType,
-    lessonStatus: lesson.lessonStatus,
-    position: lesson.position,
-    slug: lesson.slug,
-    chapterId: lesson.chapter?.id,
-    createdAt: lesson.createdAt,
-    updatedAt: lesson.updatedAt,
-    deletedAt: lesson.deletedAt,
-  });
+  private transform = (lesson: Lesson) => {
+    let data: ContentLessonResponseDto | null = null;
+
+    switch (lesson.lessonType) {
+      case LessonType.CONTENT:
+        data = ContentLessonResponseDto.fromEntity(lesson.contentLesson);
+        break;
+
+      default:
+        break;
+    }
+    return {
+      id: lesson.id,
+      title: lesson.title,
+      lessonType: lesson.lessonType,
+      lessonStatus: lesson.lessonStatus,
+      position: lesson.position,
+      slug: lesson.slug,
+      chapterId: lesson.chapter?.id,
+      createdAt: lesson.createdAt,
+      updatedAt: lesson.updatedAt,
+      deletedAt: lesson.deletedAt,
+      data,
+    };
+  };
 
   public async findLessonById(id: number) {
     const ctx = { method: 'findLessonById', entity: this._entity, id };
@@ -74,6 +93,18 @@ export class LessonService {
         throw new NotFoundException(
           generateMessage('failed', this._entity, id, reason),
         );
+      }
+
+      switch (lesson.lessonType) {
+        case LessonType.CONTENT:
+          lesson.contentLesson =
+            await this.contentLessonService.findContentLessonByLessonId(
+              lesson.id,
+            );
+          break;
+
+        default:
+          break;
       }
 
       this.logger.success(ctx, 'fetched');
@@ -124,7 +155,7 @@ export class LessonService {
     }
   }
 
-  public async createLesson(createLessonDto: CreateLessonDto) {
+  public async createLesson(createLessonDto: BaseCreateLessonDto) {
     const ctx = { method: 'createLesson', entity: this._entity };
     this.logger.start(ctx);
 
@@ -184,13 +215,36 @@ export class LessonService {
       });
 
       const lessonSaved = await this.lessonRepository.save(lesson);
-      const lessonSavedResponse = LessonResponseDto.fromEntity(lessonSaved);
+      this.logger.success(ctx, 'created');
+      return lessonSaved;
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async createLessonWithContent(
+    createLessonContentDto: CreateLessonWithContentDto,
+  ) {
+    const ctx = { method: 'createLessonWithContent', entity: this._entity };
+    this.logger.start(ctx);
+    try {
+      const lesson = await this.createLesson(createLessonContentDto);
+      const contentLesson = await this.contentLessonService.createContentlesson(
+        {
+          lessonId: lesson.id,
+          content: createLessonContentDto.content,
+        },
+      );
+
+      const record: Lesson = {
+        ...lesson,
+        contentLesson: contentLesson,
+      };
 
       this.logger.success(ctx, 'created');
-
       return ResponseFactory.success<LessonResponseDto>(
-        generateMessage('created', this._entity, lessonSaved.id),
-        lessonSavedResponse,
+        generateMessage('created', this._entity, lesson.id),
+        LessonResponseDto.fromEntity(record),
       );
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity);
@@ -263,7 +317,6 @@ export class LessonService {
       await this.lessonRepository.save(lesson);
       const lessonUpdated = await this.findLessonById(id);
       const lessonUpdatedResponse = LessonResponseDto.fromEntity(lessonUpdated);
-
       this.logger.success(ctx, 'updated');
 
       return ResponseFactory.success<LessonResponseDto>(

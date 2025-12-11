@@ -8,6 +8,8 @@ import {
   Patch,
   Post,
   Query,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import {
   ApiOperation,
@@ -19,7 +21,6 @@ import {
 } from '@nestjs/swagger';
 import { LessonService } from './lesson.service';
 import { UpdateLessonDto } from './dtos/update-lesson.dto';
-import { CreateLessonDto } from './dtos/create-lesson.dto';
 import { LessonResponseDto } from './dtos/lesson-response.dto';
 import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';
 import { PaginationResponse } from 'src/common/pagination/dtos/pagination-response.dto';
@@ -27,6 +28,7 @@ import { BaseResponseDto } from 'src/common/response/dtos/base-response.dto';
 import { ChangeLessonStatusDto } from './dtos/change-lesson-status.dto';
 import { ChangeLessonPositionDto } from './dtos/change-lesson-position.dto';
 import { LessonStatus } from './enums/lesson.enum';
+import { CreateLessonWithContentDto } from './dtos/create-lesson-with-content.dto';
 
 @ApiTags('Lessons')
 @Controller('lesson')
@@ -62,42 +64,96 @@ export class LessonController {
     return await this.lessonService.getAllLessons(paginationQueryDto);
   }
 
-  @Post()
+  // @Post()
+  // @ApiOperation({
+  //   summary: 'Create a new lesson',
+  //   description: 'Create a new lesson and assign it to an existing chapter.',
+  // })
+  // @ApiBody({
+  //   type: BaseCreateLessonDto,
+  //   examples: {
+  //     example1: {
+  //       summary: 'Example payload',
+  //       value: {
+  //         title: 'Introduction to React',
+  //         lessonType: 'video',
+  //         lessonStatus: 'published',
+  //         position: 1,
+  //         chapterId: 2,
+  //       },
+  //     },
+  //   },
+  // })
+  // @ApiResponse({
+  //   status: 201,
+  //   description: 'Lesson created successfully.',
+  //   type: BaseResponseDto<LessonResponseDto>,
+  // })
+  // @ApiResponse({
+  //   status: 400,
+  //   description: 'Invalid input or missing required fields',
+  // })
+  // @ApiResponse({
+  //   status: 404,
+  //   description: 'Chapter not found (if chapterId is provided)',
+  // })
+  // @ApiResponse({ status: 500, description: 'Internal server error' })
+  // public async createLesson(
+  //   @Body()
+  //   createLesson: BaseCreateLessonDto,
+  // ) {
+  //   return await this.lessonService.createLesson(createLesson);
+  // }
+
+  @Post('content')
   @ApiOperation({
-    summary: 'Create a new lesson',
-    description: 'Create a new lesson and assign it to an existing chapter.',
+    summary: 'Create a lesson with content',
+    description: 'Create a new lesson and attach its content data.',
   })
   @ApiBody({
-    type: CreateLessonDto,
+    type: CreateLessonWithContentDto,
     examples: {
       example1: {
-        summary: 'Example payload',
+        summary: 'Create a lesson with text content',
         value: {
           title: 'Introduction to React',
-          lessonType: 'video',
+          lessonType: 'content',
           lessonStatus: 'published',
           position: 1,
           chapterId: 2,
+          content: '<p>Hello React</p>',
         },
       },
     },
   })
   @ApiResponse({
     status: 201,
-    description: 'Lesson created successfully.',
+    description: 'Lesson with content created successfully.',
     type: BaseResponseDto<LessonResponseDto>,
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid input or missing required fields',
+    description: 'Invalid request body or missing required fields.',
   })
   @ApiResponse({
     status: 404,
-    description: 'Chapter not found (if chapterId is provided)',
+    description: 'Chapter not found.',
   })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async createLesson(@Body() createLesson: CreateLessonDto) {
-    return await this.lessonService.createLesson(createLesson);
+  @ApiResponse({
+    status: 500,
+    description: 'Unexpected server error.',
+  })
+  @ApiOperation({
+    summary: 'Create a content lesson',
+    description:
+      'Create a lesson with lesson type CONTENT and store its content in the database.',
+  })
+  public async CreateLessonContent(
+    @Body() createLessonCotentDto: CreateLessonWithContentDto,
+  ) {
+    return await this.lessonService.createLessonWithContent(
+      createLessonCotentDto,
+    );
   }
 
   @Get('deleted')

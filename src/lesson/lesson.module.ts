@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Lesson } from './lesson.entity';
 import { ChaptersModule } from 'src/chapters/chapters.module';
 import { PaginationModule } from 'src/common/pagination/pagination.module';
+import { ContentLessonModule } from 'src/content-lesson/content-lesson.module';
 
 @Module({
   providers: [LessonService],
@@ -13,6 +14,8 @@ import { PaginationModule } from 'src/common/pagination/pagination.module';
     TypeOrmModule.forFeature([Lesson]),
     ChaptersModule,
     PaginationModule,
+    ContentLessonModule,
   ],
+  exports: [LessonService],
 })
 export class LessonModule {}

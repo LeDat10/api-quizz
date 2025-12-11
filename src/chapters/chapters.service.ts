@@ -45,7 +45,9 @@ export class ChaptersService {
     position: chapter.position,
     slug: chapter.slug,
     courseId: chapter.course?.id,
-    lessons: LessonResponseDto.fromEntities(chapter.lessons),
+    lessons: chapter.lessons
+      ? LessonResponseDto.fromEntities(chapter.lessons)
+      : null,
     createdAt: chapter.createdAt,
     updatedAt: chapter.updatedAt,
     deletedAt: chapter.deletedAt,

@@ -2,14 +2,13 @@ import {
   IsEnum,
   IsInt,
   IsNotEmpty,
-  IsNumber,
   IsOptional,
   IsString,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { LessonStatus, LessonType } from '../enums/lesson.enum';
 
-export class CreateLessonDto {
+export class BaseCreateLessonDto {
   @ApiProperty({
     example: 'Introduction to TypeScript',
     description: 'Title of the lesson',

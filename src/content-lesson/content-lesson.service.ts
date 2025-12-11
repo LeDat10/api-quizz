@@ -1,0 +1,138 @@
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { ContentLesson } from './content-lesson.entity';
+import { Repository } from 'typeorm';
+import { LoggerHelper } from 'src/common/helpers/logger/logger.helper';
+import { ErrorHandlerHelper } from 'src/common/helpers/error/handle-error.helper';
+import { generateMessage } from 'src/common/utils/generateMessage.util';
+import { CreateContentLessonDto } from './dtos/create-content-lesson.dto';
+import { UpdateContentlessonDto } from './dtos/update-content-lesson.dto';
+
+@Injectable()
+export class ContentLessonService {
+  private readonly logger = new LoggerHelper(ContentLessonService.name);
+  private readonly errorHandler = new ErrorHandlerHelper(
+    ContentLessonService.name,
+  );
+  private _entity = 'ContentLesson';
+  constructor(
+    @InjectRepository(ContentLesson)
+    private readonly contentLessonRepository: Repository<ContentLesson>,
+  ) {}
+
+  public async findContentLessonById(id: number) {
+    const ctx = { method: 'findContentLessonById', entity: this._entity, id };
+    this.logger.start(ctx);
+    try {
+      if (!id) {
+        const reason = 'Missing parameter id';
+        this.logger.warn(ctx, 'failed', reason);
+        throw new BadRequestException(
+          generateMessage('failed', this._entity, id, reason),
+        );
+      }
+
+      const record = await this.contentLessonRepository.findOne({
+        where: { id },
+      });
+
+      if (!record) {
+        const reason = 'Not found';
+        this.logger.warn(ctx, 'failed', reason);
+        throw new NotFoundException(
+          generateMessage('failed', this._entity, id, reason),
+        );
+      }
+
+      this.logger.success(ctx, 'fetched');
+      return record;
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity, id);
+    }
+  }
+
+  public async findContentLessonByLessonId(lessonId: number) {
+    const ctx = {
+      method: 'findContentLessonByLessonId',
+      entity: this._entity,
+      lessonId,
+    };
+    this.logger.start(ctx);
+    try {
+      if (!lessonId) {
+        const reason = 'Missing parameter id';
+        this.logger.warn(ctx, 'failed', reason);
+        throw new BadRequestException(
+          generateMessage('failed', this._entity, lessonId, reason),
+        );
+      }
+
+      const record = await this.contentLessonRepository.findOne({
+        where: { lesson: { id: lessonId } },
+      });
+
+      if (!record) {
+        const reason = `Not found ContentLesson with Lesson Id: ${lessonId}`;
+        this.logger.warn(ctx, 'failed', reason);
+        throw new NotFoundException(
+          generateMessage('failed', this._entity, lessonId, reason),
+        );
+      }
+
+      this.logger.success(ctx, 'fetched');
+      return record;
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity, lessonId);
+    }
+  }
+
+  public async createContentlesson(
+    createContentLessonDto: CreateContentLessonDto,
+  ) {
+    const ctx = { method: 'createContentlesson', entity: this._entity };
+    this.logger.start(ctx);
+    try {
+      const { lessonId, content } = createContentLessonDto;
+
+      // if (!(lesson instanceof Lesson)) {
+      //   const reason =
+      //     'The "lesson" field is invalid or missing required data.';
+      //   this.logger.warn(ctx, 'created', reason);
+      //   throw new BadRequestException(
+      //     generateMessage('created', this._entity, undefined, reason),
+      //   );
+      // }
+
+      const contentLesson = this.contentLessonRepository.create({
+        content,
+        lesson: { id: lessonId },
+      });
+
+      const record = await this.contentLessonRepository.save(contentLesson);
+      return record;
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async updateContentLesson(
+    updateContentLessonDto: UpdateContentlessonDto,
+  ) {
+    const ctx = { method: 'updateContentLesson', entity: this._entity };
+    this.logger.start(ctx);
+    try {
+      const contentLesson = await this.findContentLessonById(
+        updateContentLessonDto.id,
+      );
+      contentLesson.content = updateContentLessonDto.content;
+      await this.contentLessonRepository.save(contentLesson);
+      return contentLesson;
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+}

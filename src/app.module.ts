@@ -23,6 +23,8 @@ import { VideoResource } from './resource/entities/video-resource.entity';
 import { ResourceLibrary } from './resource-library/resource-library.entity';
 import { PemService } from './common/pem/pem.service';
 import { PemModule } from './common/pem/pem.module';
+import { ContentLessonModule } from './content-lesson/content-lesson.module';
+import { ContentLesson } from './content-lesson/content-lesson.entity';
 
 const ENV = process.env.NODE_ENV;
 
@@ -67,6 +69,7 @@ const ENV = process.env.NODE_ENV;
             AudioResource,
             VideoResource,
             ResourceLibrary,
+            ContentLesson,
           ],
         };
       },
@@ -79,6 +82,7 @@ const ENV = process.env.NODE_ENV;
     ResourceModule,
     ResourceLibraryModule,
     PemModule,
+    ContentLessonModule,
   ],
   controllers: [AppController],
   providers: [AppService],

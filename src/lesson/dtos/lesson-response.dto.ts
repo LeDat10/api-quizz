@@ -1,6 +1,7 @@
 import { LessonStatus, LessonType } from '../enums/lesson.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Lesson } from '../lesson.entity';
+import { ContentLessonResponseDto } from 'src/content-lesson/dtos/content-lesson-response.dto';
 
 export class LessonResponseDto {
   constructor(entity: Lesson) {
@@ -14,6 +15,17 @@ export class LessonResponseDto {
     this.createdAt = entity.createdAt;
     this.updatedAt = entity.updatedAt;
     this.deletedAt = entity.deletedAt;
+
+    switch (entity.lessonType) {
+      case LessonType.CONTENT:
+        this.data = entity.contentLesson
+          ? ContentLessonResponseDto.fromEntity(entity.contentLesson)
+          : null;
+        break;
+
+      default:
+        break;
+    }
   }
 
   @ApiProperty({
@@ -60,6 +72,9 @@ export class LessonResponseDto {
     description: 'Identifier of the chapter that this lesson belongs to',
   })
   chapterId: number;
+
+  @ApiProperty()
+  data: ContentLessonResponseDto | null;
 
   @ApiProperty({
     example: '2025-10-28T08:45:00.000Z',

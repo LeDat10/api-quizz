@@ -12,7 +12,9 @@ export class ChapterResponseDto {
     this.position = entity.position;
     this.slug = entity.slug;
     this.courseId = entity.course.id;
-    this.lessons = LessonResponseDto.fromEntities(entity.lessons);
+    this.lessons = entity.lessons
+      ? LessonResponseDto.fromEntities(entity.lessons)
+      : null;
     this.createdAt = entity.createdAt;
     this.updatedAt = entity.updatedAt;
     this.deletedAt = entity.deletedAt;
@@ -58,7 +60,7 @@ export class ChapterResponseDto {
   courseId: number;
 
   @ApiProperty()
-  lessons: LessonResponseDto[];
+  lessons: LessonResponseDto[] | null;
 
   @ApiProperty()
   createdAt: Date;

@@ -5,12 +5,14 @@ import {
   Entity,
   ManyToMany,
   ManyToOne,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { LessonStatus, LessonType } from './enums/lesson.enum';
 import { Chapter } from 'src/chapters/chapter.entity';
 import { Resource } from 'src/resource/entities/resource.entity';
+import { ContentLesson } from 'src/content-lesson/content-lesson.entity';
 
 @Entity()
 export class Lesson {
@@ -57,6 +59,9 @@ export class Lesson {
     nullable: true,
   })
   resources: Resource[];
+
+  @OneToOne(() => ContentLesson, (contentLesson) => contentLesson.lesson)
+  contentLesson: ContentLesson;
 
   @CreateDateColumn()
   createdAt: Date;
