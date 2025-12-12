@@ -44,6 +44,7 @@ const TABLE_RELATIONS = {
   CHAPTER: 'chapter',
 } as const;
 
+// Transformer
 interface ILessonDataTransformer {
   transform(lesson: Lesson): any;
 }
@@ -87,6 +88,122 @@ class DefaultLessonTransformer implements ILessonDataTransformer {
   }
 }
 
+// Create Strategy Pattern
+interface LessonCreator {
+  validate(dto: BaseCreateLessonDto): void;
+  prepareData(dto: BaseCreateLessonDto, lesson: Lesson): Promise<void>;
+  updateData(dto: BaseUpdateLessonDto, lesson: Lesson): Promise<void>;
+}
+
+class ContentLessonCreator implements LessonCreator {
+  constructor(private contentLessonService: ContentLessonService) {}
+
+  validate(dto: BaseCreateLessonDto): void {
+    const contentDto = dto as CreateLessonWithContentDto;
+    if (!contentDto.content) {
+      throw new BadRequestException(
+        'Content is required for CONTENT type lesson',
+      );
+    }
+  }
+
+  async prepareData(dto: BaseCreateLessonDto, lesson: Lesson): Promise<void> {
+    const contentDto = dto as CreateLessonWithContentDto;
+    if (!contentDto.content) return;
+
+    await this.contentLessonService.createContentlesson({
+      lessonId: lesson.id,
+      content: contentDto.content,
+    });
+  }
+
+  async updateData(dto: BaseUpdateLessonDto, lesson: Lesson): Promise<void> {
+    const contentDto = dto as UdpateLessonWithContentDto;
+
+    if (!contentDto.content) {
+      return;
+    }
+
+    if (lesson.contentLesson) {
+      await this.contentLessonService.updateContentLesson({
+        id: lesson.contentLesson.id,
+        content: contentDto.content,
+      });
+    } else {
+      await this.contentLessonService.createContentlesson({
+        lessonId: lesson.id,
+        content: contentDto.content,
+      });
+    }
+  }
+}
+
+class AssignmentLessonCreator implements LessonCreator {
+  constructor(private contentLessonService: ContentLessonService) {}
+  updateData(dto: BaseUpdateLessonDto, lesson: Lesson): Promise<void> {
+    throw new Error('Method not implemented.');
+  }
+
+  validate(dto: BaseCreateLessonDto): void {
+    // const contentDto = dto as CreateLessonWithContentDto;
+    // if (!contentDto.content) {
+    //   throw new BadRequestException('Content is required for CONTENT type lesson');
+    // }
+  }
+
+  async prepareData(dto: BaseCreateLessonDto, lesson: Lesson): Promise<void> {
+    // const contentDto = dto as CreateLessonWithContentDto;
+    // await this.contentLessonService.createContentlesson({
+    //   lessonId: lesson.id,
+    //   content: contentDto.content,
+    // });
+  }
+}
+
+class QuizLessonCreator implements LessonCreator {
+  constructor(private contentLessonService: ContentLessonService) {}
+  updateData(dto: BaseUpdateLessonDto, lesson: Lesson): Promise<void> {
+    throw new Error('Method not implemented.');
+  }
+
+  validate(dto: BaseCreateLessonDto): void {
+    // const contentDto = dto as CreateLessonWithContentDto;
+    // if (!contentDto.content) {
+    //   throw new BadRequestException('Content is required for CONTENT type lesson');
+    // }
+  }
+
+  async prepareData(dto: BaseCreateLessonDto, lesson: Lesson): Promise<void> {
+    // const contentDto = dto as CreateLessonWithContentDto;
+    // await this.contentLessonService.createContentlesson({
+    //   lessonId: lesson.id,
+    //   content: contentDto.content,
+    // });
+  }
+}
+
+class PdfLessonCreator implements LessonCreator {
+  constructor(private contentLessonService: ContentLessonService) {}
+  updateData(dto: BaseUpdateLessonDto, lesson: Lesson): Promise<void> {
+    throw new Error('Method not implemented.');
+  }
+
+  validate(dto: BaseCreateLessonDto): void {
+    // const contentDto = dto as CreateLessonWithContentDto;
+    // if (!contentDto.content) {
+    //   throw new BadRequestException('Content is required for CONTENT type lesson');
+    // }
+  }
+
+  async prepareData(dto: BaseCreateLessonDto, lesson: Lesson): Promise<void> {
+    // const contentDto = dto as CreateLessonWithContentDto;
+    // await this.contentLessonService.createContentlesson({
+    //   lessonId: lesson.id,
+    //   content: contentDto.content,
+    // });
+  }
+}
+
 @Injectable()
 export class LessonService {
   private readonly logger = new LoggerHelper(LessonService.name);
@@ -103,13 +220,26 @@ export class LessonService {
 
   private readonly defaultTransformer = new DefaultLessonTransformer();
 
+  private readonly lessonCreators: Record<LessonType, LessonCreator>;
+
   constructor(
     @InjectRepository(Lesson)
     private readonly lessonRepository: Repository<Lesson>,
     private readonly chapterService: ChaptersService,
     private readonly paginationProvider: PaginationProvider,
     private readonly contentLessonService: ContentLessonService,
-  ) {}
+  ) {
+    this.lessonCreators = {
+      [LessonType.CONTENT]: new ContentLessonCreator(this.contentLessonService),
+      [LessonType.ASSIGNMENT]: new ContentLessonCreator(
+        this.contentLessonService,
+      ),
+      [LessonType.QUIZ]: new ContentLessonCreator(this.contentLessonService),
+      [LessonType.PDF]: new ContentLessonCreator(this.contentLessonService),
+
+      // [LessonType.VIDEO]: new VideoLessonCreator(this.videoLessonService),
+    };
+  }
 
   private transform = (lesson: Lesson) => {
     const transformer =
@@ -217,6 +347,8 @@ export class LessonService {
     this.logger.start(ctx);
 
     try {
+      const creator = this.lessonCreators[createLessonDto.lessonType];
+
       // Find chapter
       const chapter = await this.chapterService.findChapterById(
         createLessonDto.chapterId,
@@ -256,39 +388,23 @@ export class LessonService {
         );
       }
 
-      let record: any = {};
-
-      switch (createLessonDto.lessonType) {
-        case LessonType.CONTENT:
-          const dtoWithContent = createLessonDto as CreateLessonWithContentDto;
-          if (!dtoWithContent.content) {
-            const reason = 'Content is required and cannot be empty.';
-            this.logger.fail(ctx, reason, ACTIONS.CREATED);
-            throw new BadRequestException(
-              generateMessage(ACTIONS.FAILED, this._entity, undefined, reason),
-            );
-          }
-
-          record = {
-            ...createLessonDto,
-            slug,
-            chapter,
-            contentLesson: {
-              content: dtoWithContent.content,
-            },
-          };
-
-          break;
-
-        default:
-          break;
-      }
-
       // Create and save
-      const lesson = this.lessonRepository.create(record);
-      const lessonSaved = await this.lessonRepository.save(lesson);
+      const lesson = this.lessonRepository.create({
+        ...createLessonDto,
+        chapter,
+        slug,
+      });
+
+      const savedLesson = await this.lessonRepository.save(lesson);
+
+      await creator.prepareData(createLessonDto, savedLesson);
+
+      const record = await this.findLessonById(savedLesson.id);
       this.logger.success(ctx, ACTIONS.CREATED);
-      return lessonSaved;
+      return ResponseFactory.success<LessonResponseDto>(
+        generateMessage('created', this._entity, record.id),
+        LessonResponseDto.fromEntity(record),
+      );
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity);
     }
@@ -313,6 +429,8 @@ export class LessonService {
           generateMessage(ACTIONS.FAILED, this._entity, id, reason),
         );
       }
+
+      const creator = this.lessonCreators[lesson.lessonType];
 
       // Update chapter if provided
       if (updateLessonDto.chapterId) {
@@ -354,37 +472,14 @@ export class LessonService {
         lesson.slug = slug;
       }
 
-      if (updateLessonDto.title) lesson.title = updateLessonDto.title;
-      if (updateLessonDto.lessonStatus)
-        lesson.lessonStatus = updateLessonDto.lessonStatus;
-      if (updateLessonDto.position !== undefined)
-        lesson.position = updateLessonDto.position;
+      const data = Object.fromEntries(
+        Object.entries(updateLessonDto).filter(([_, v]) => v !== undefined),
+      );
 
-      switch (lesson.lessonType) {
-        case LessonType.CONTENT:
-          const dtoWithContent = updateLessonDto as UdpateLessonWithContentDto;
-          if (dtoWithContent.content !== undefined) {
-            if (lesson.contentLesson) {
-              lesson.contentLesson =
-                await this.contentLessonService.updateContentLesson({
-                  id: lesson.contentLesson.id,
-                  content: dtoWithContent.content,
-                });
-            } else {
-              lesson.contentLesson =
-                await this.contentLessonService.createContentlesson({
-                  lessonId: lesson.id,
-                  content: dtoWithContent.content,
-                });
-            }
-          }
-          break;
-
-        default:
-          break;
-      }
+      Object.assign(lesson, data);
 
       await this.lessonRepository.save(lesson);
+      await creator.updateData(updateLessonDto, lesson);
       const lessonUpdated = await this.findLessonById(id);
       this.logger.success(ctx, ACTIONS.UPDATED);
 

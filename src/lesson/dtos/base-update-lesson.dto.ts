@@ -12,15 +12,6 @@ export class BaseUpdateLessonDto {
   title?: string;
 
   @ApiPropertyOptional({
-    enum: LessonType,
-    example: LessonType.QUIZ,
-    description: 'Updated lesson type (content, quiz, or assignment)',
-  })
-  @IsEnum(LessonType)
-  @IsOptional()
-  lessonType?: LessonType;
-
-  @ApiPropertyOptional({
     enum: LessonStatus,
     example: LessonStatus.PUBLISHED,
     description:

@@ -23,8 +23,7 @@ export class BaseCreateLessonDto {
     description: 'Type of the lesson (content, quiz, or assignment)',
   })
   @IsEnum(LessonType)
-  @IsOptional()
-  lessonType?: LessonType;
+  lessonType: LessonType;
 
   @ApiPropertyOptional({
     enum: LessonStatus,

@@ -16,7 +16,7 @@ export class ContentLesson {
   id: number;
 
   @Column({
-    type: 'varchar',
+    type: 'text',
     nullable: false,
   })
   content: string;
