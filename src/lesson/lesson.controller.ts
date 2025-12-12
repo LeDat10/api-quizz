@@ -152,9 +152,7 @@ export class LessonController {
   public async CreateLessonContent(
     @Body() createLessonCotentDto: CreateLessonWithContentDto,
   ) {
-    return await this.lessonService.createLessonWithContent(
-      createLessonCotentDto,
-    );
+    return await this.lessonService.createLesson(createLessonCotentDto);
   }
 
   @Get('deleted')
@@ -362,10 +360,7 @@ export class LessonController {
     @Param('id', ParseIntPipe) id: number,
     @Body() updateLessonContentDto: UdpateLessonWithContentDto,
   ) {
-    return await this.lessonService.updateLessonWithContent(
-      id,
-      updateLessonContentDto,
-    );
+    return await this.lessonService.updateLesson(id, updateLessonContentDto);
   }
 
   @Patch(':id/status')

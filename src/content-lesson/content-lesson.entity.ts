@@ -23,6 +23,7 @@ export class ContentLesson {
 
   @OneToOne(() => Lesson, (lesson) => lesson.contentLesson, {
     onDelete: 'CASCADE',
+    cascade: ['insert', 'update'],
   })
   @JoinColumn()
   lesson: Lesson;

@@ -27,12 +27,81 @@ import { CreateLessonWithContentDto } from './dtos/create-lesson-with-content.dt
 import { ContentLessonResponseDto } from 'src/content-lesson/dtos/content-lesson-response.dto';
 import { BaseUpdateLessonDto } from './dtos/base-update-lesson.dto';
 import { UdpateLessonWithContentDto } from './dtos/update-lesson-with-content.dto';
+import { v4 as uuidv4 } from 'uuid';
+
+export const ACTIONS = {
+  CREATED: 'created',
+  UPDATED: 'updated',
+  DELETED: 'deleted',
+  RESTORED: 'restored',
+  FETCHED: 'fetched',
+  START: 'start',
+  FAILED: 'failed',
+} as const;
+
+const TABLE_RELATIONS = {
+  CONTENT: 'contentLesson',
+  CHAPTER: 'chapter',
+} as const;
+
+interface ILessonDataTransformer {
+  transform(lesson: Lesson): any;
+}
+
+class ContentLessonTransformer implements ILessonDataTransformer {
+  transform(lesson: Lesson): ContentLessonResponseDto | null {
+    if (!lesson.contentLesson) {
+      return null;
+    }
+    return ContentLessonResponseDto.fromEntity(lesson.contentLesson);
+  }
+}
+
+class QuizLessonTransformer implements ILessonDataTransformer {
+  transform(lesson: Lesson): any {
+    // TODO: Implement when QuizLesson feature is added
+    // return QuizLessonResponseDto.fromEntity(lesson.quizLesson);
+    return null;
+  }
+}
+
+class AssignmentLessonTransformer implements ILessonDataTransformer {
+  transform(lesson: Lesson): any {
+    // TODO: Implement when VideoLesson feature is added
+    // return AssignmentLessonTransformer.fromEntity(lesson.videoLesson);
+    return null;
+  }
+}
+
+class PdfLessonTransformer implements ILessonDataTransformer {
+  transform(lesson: Lesson): any {
+    // TODO: Implement when VideoLesson feature is added
+    // return PdfLessonTransformer.fromEntity(lesson.videoLesson);
+    return null;
+  }
+}
+
+class DefaultLessonTransformer implements ILessonDataTransformer {
+  transform(lesson: Lesson): null {
+    return null;
+  }
+}
 
 @Injectable()
 export class LessonService {
   private readonly logger = new LoggerHelper(LessonService.name);
   private readonly errorHandler = new ErrorHandlerHelper(LessonService.name);
   private _entity = 'Lesson';
+
+  private readonly transformers: Record<LessonType, ILessonDataTransformer> = {
+    [LessonType.CONTENT]: new ContentLessonTransformer(),
+    [LessonType.ASSIGNMENT]: new AssignmentLessonTransformer(),
+    [LessonType.QUIZ]: new QuizLessonTransformer(),
+    [LessonType.PDF]: new PdfLessonTransformer(),
+    // Add more lesson types here as needed
+  };
+
+  private readonly defaultTransformer = new DefaultLessonTransformer();
 
   constructor(
     @InjectRepository(Lesson)
@@ -43,18 +112,9 @@ export class LessonService {
   ) {}
 
   private transform = (lesson: Lesson) => {
-    let data: ContentLessonResponseDto | null = null;
-
-    if (lesson.contentLesson) {
-      switch (lesson.lessonType) {
-        case LessonType.CONTENT:
-          data = ContentLessonResponseDto.fromEntity(lesson.contentLesson);
-          break;
-
-        default:
-          break;
-      }
-    }
+    const transformer =
+      this.transformers[lesson.lessonType] || this.defaultTransformer;
+    const data = lesson.contentLesson ? transformer.transform(lesson) : null;
     return {
       id: lesson.id,
       title: lesson.title,
@@ -70,45 +130,37 @@ export class LessonService {
     };
   };
 
+  private validateId(id: number, ctx: any) {
+    if (!id) {
+      const reason = 'Missing parameter id';
+      this.logger.warn(ctx, ACTIONS.FAILED, reason);
+      throw new BadRequestException(
+        generateMessage(ACTIONS.FAILED, this._entity, id, reason),
+      );
+    }
+  }
+
   public async findLessonById(id: number) {
     const ctx = { method: 'findLessonById', entity: this._entity, id };
     this.logger.start(ctx);
 
     try {
-      if (!id) {
-        const reason = 'Missing parameter id';
-        this.logger.warn(ctx, 'failed', reason);
-        throw new BadRequestException(
-          generateMessage('failed', this._entity, id, reason),
-        );
-      }
+      this.validateId(id, ctx);
 
       const lesson = await this.lessonRepository.findOne({
         where: { id },
-        relations: ['chapter'],
+        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
       });
 
       if (!lesson) {
         const reason = 'Not found';
-        this.logger.warn(ctx, 'failed', reason);
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
         throw new NotFoundException(
-          generateMessage('failed', this._entity, id, reason),
+          generateMessage(ACTIONS.FAILED, this._entity, id, reason),
         );
       }
 
-      switch (lesson.lessonType) {
-        case LessonType.CONTENT:
-          lesson.contentLesson =
-            await this.contentLessonService.findContentLessonByLessonId(
-              lesson.id,
-            );
-          break;
-
-        default:
-          break;
-      }
-
-      this.logger.success(ctx, 'fetched');
+      this.logger.success(ctx, ACTIONS.FETCHED);
       return lesson;
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity, id);
@@ -120,17 +172,21 @@ export class LessonService {
     this.logger.start(ctx);
 
     try {
-      this.logger.debug(ctx, 'start', 'Querying database for all lessons');
+      this.logger.debug(
+        ctx,
+        ACTIONS.START,
+        'Querying database for all lessons',
+      );
 
       const lessons = await this.paginationProvider.paginateQuery<
         Lesson,
         LessonResponseDto
       >(paginationQueryDto, this.lessonRepository, this.transform, {
         order: { position: 'ASC' },
-        relations: ['chapter', 'contentLesson'],
+        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
       });
 
-      this.logger.success(ctx, 'fetched');
+      this.logger.success(ctx, ACTIONS.FETCHED);
       return lessons;
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity);
@@ -145,10 +201,10 @@ export class LessonService {
       const lesson = await this.findLessonById(id);
       const lessonResponse = LessonResponseDto.fromEntity(lesson);
 
-      this.logger.success(ctx, 'fetched');
+      this.logger.success(ctx, ACTIONS.FETCHED);
 
       return ResponseFactory.success<LessonResponseDto>(
-        generateMessage('fetched', this._entity, id),
+        generateMessage(ACTIONS.FETCHED, this._entity, id),
         lessonResponse,
       );
     } catch (error) {
@@ -161,12 +217,6 @@ export class LessonService {
     this.logger.start(ctx);
 
     try {
-      this.logger.debug(
-        ctx,
-        'start',
-        `Creating with title: ${createLessonDto.title}`,
-      );
-
       // Find chapter
       const chapter = await this.chapterService.findChapterById(
         createLessonDto.chapterId,
@@ -174,13 +224,11 @@ export class LessonService {
 
       if (!chapter) {
         const reason = `Chapter ID ${createLessonDto.chapterId} not found`;
-        this.logger.warn(ctx, 'failed', reason);
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
         throw new NotFoundException(
-          generateMessage('failed', this._entity, undefined, reason),
+          generateMessage(ACTIONS.FAILED, this._entity, undefined, reason),
         );
       }
-
-      this.logger.debug(ctx, 'start', `Chapter found: ${chapter.title}`);
 
       // Generate slug
       let slug = generateSlug(createLessonDto.title);
@@ -191,7 +239,7 @@ export class LessonService {
       if (lessonWithSlugExist) {
         this.logger.warn(
           ctx,
-          'start',
+          ACTIONS.START,
           `Slug ${slug} exists, appending random string`,
         );
         slug = `${slug}-${generateRadomString()}`;
@@ -203,50 +251,44 @@ export class LessonService {
         createLessonDto.position = count + 1;
         this.logger.debug(
           ctx,
-          'start',
+          ACTIONS.START,
           `Auto-assigned position: ${createLessonDto.position}`,
         );
       }
 
+      let record: any = {};
+
+      switch (createLessonDto.lessonType) {
+        case LessonType.CONTENT:
+          const dtoWithContent = createLessonDto as CreateLessonWithContentDto;
+          if (!dtoWithContent.content) {
+            const reason = 'Content is required and cannot be empty.';
+            this.logger.fail(ctx, reason, ACTIONS.CREATED);
+            throw new BadRequestException(
+              generateMessage(ACTIONS.FAILED, this._entity, undefined, reason),
+            );
+          }
+
+          record = {
+            ...createLessonDto,
+            slug,
+            chapter,
+            contentLesson: {
+              content: dtoWithContent.content,
+            },
+          };
+
+          break;
+
+        default:
+          break;
+      }
+
       // Create and save
-      const lesson = this.lessonRepository.create({
-        ...createLessonDto,
-        slug,
-        chapter,
-      });
-
+      const lesson = this.lessonRepository.create(record);
       const lessonSaved = await this.lessonRepository.save(lesson);
-      this.logger.success(ctx, 'created');
+      this.logger.success(ctx, ACTIONS.CREATED);
       return lessonSaved;
-    } catch (error) {
-      return this.errorHandler.handle(ctx, error, this._entity);
-    }
-  }
-
-  public async createLessonWithContent(
-    createLessonContentDto: CreateLessonWithContentDto,
-  ) {
-    const ctx = { method: 'createLessonWithContent', entity: this._entity };
-    this.logger.start(ctx);
-    try {
-      const lesson = await this.createLesson(createLessonContentDto);
-      const contentLesson = await this.contentLessonService.createContentlesson(
-        {
-          lessonId: lesson.id,
-          content: createLessonContentDto.content,
-        },
-      );
-
-      const record: Lesson = {
-        ...lesson,
-        contentLesson: contentLesson,
-      };
-
-      this.logger.success(ctx, 'created');
-      return ResponseFactory.success<LessonResponseDto>(
-        generateMessage('created', this._entity, lesson.id),
-        LessonResponseDto.fromEntity(record),
-      );
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity);
     }
@@ -257,24 +299,18 @@ export class LessonService {
     this.logger.start(ctx);
 
     try {
-      if (!id) {
-        const reason = 'Missing parameter id';
-        this.logger.warn(ctx, 'failed', reason);
-        throw new BadRequestException(
-          generateMessage('failed', this._entity, id, reason),
-        );
-      }
+      this.validateId(id, ctx);
 
       const lesson = await this.lessonRepository.findOne({
         where: { id },
-        relations: ['chapter'],
+        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
       });
 
       if (!lesson) {
         const reason = 'Not found';
-        this.logger.warn(ctx, 'failed', reason);
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
         throw new NotFoundException(
-          generateMessage('failed', this._entity, id, reason),
+          generateMessage(ACTIONS.FAILED, this._entity, id, reason),
         );
       }
 
@@ -282,7 +318,7 @@ export class LessonService {
       if (updateLessonDto.chapterId) {
         this.logger.debug(
           ctx,
-          'start',
+          ACTIONS.START,
           `Looking for chapter ID: ${updateLessonDto.chapterId}`,
         );
         const chapter = await this.chapterService.findChapterById(
@@ -291,7 +327,11 @@ export class LessonService {
 
         if (chapter) {
           lesson.chapter = chapter;
-          this.logger.debug(ctx, 'start', `Chapter found: ${chapter.title}`);
+          this.logger.debug(
+            ctx,
+            ACTIONS.START,
+            `Chapter found: ${chapter.title}`,
+          );
         }
       }
 
@@ -305,7 +345,7 @@ export class LessonService {
         if (lessonWithSlugExist && lessonWithSlugExist.id !== id) {
           this.logger.warn(
             ctx,
-            'start',
+            ACTIONS.START,
             `Slug ${slug} exists, generating new one`,
           );
           slug = `${slug}-${generateRadomString()}`;
@@ -314,38 +354,43 @@ export class LessonService {
         lesson.slug = slug;
       }
 
-      Object.assign(lesson, updateLessonDto);
-      await this.lessonRepository.save(lesson);
-      const lessonUpdated = await this.findLessonById(id);
-      this.logger.success(ctx, 'updated');
+      if (updateLessonDto.title) lesson.title = updateLessonDto.title;
+      if (updateLessonDto.lessonStatus)
+        lesson.lessonStatus = updateLessonDto.lessonStatus;
+      if (updateLessonDto.position !== undefined)
+        lesson.position = updateLessonDto.position;
 
-      return lessonUpdated;
-    } catch (error) {
-      return this.errorHandler.handle(ctx, error, this._entity, id);
-    }
-  }
+      switch (lesson.lessonType) {
+        case LessonType.CONTENT:
+          const dtoWithContent = updateLessonDto as UdpateLessonWithContentDto;
+          if (dtoWithContent.content !== undefined) {
+            if (lesson.contentLesson) {
+              lesson.contentLesson =
+                await this.contentLessonService.updateContentLesson({
+                  id: lesson.contentLesson.id,
+                  content: dtoWithContent.content,
+                });
+            } else {
+              lesson.contentLesson =
+                await this.contentLessonService.createContentlesson({
+                  lessonId: lesson.id,
+                  content: dtoWithContent.content,
+                });
+            }
+          }
+          break;
 
-  public async updateLessonWithContent(
-    id: number,
-    updateLessonContentDto: UdpateLessonWithContentDto,
-  ) {
-    const ctx = { method: 'updateLessonWithContent', entity: this._entity, id };
-    this.logger.start(ctx);
-    try {
-      const lesson = await this.updateLesson(id, updateLessonContentDto);
-      if (updateLessonContentDto.content) {
-        const contentLesson =
-          await this.contentLessonService.updateContentLesson({
-            id: lesson.contentLesson.id,
-            content: updateLessonContentDto.content,
-          });
-        lesson.contentLesson = contentLesson;
+        default:
+          break;
       }
 
-      this.logger.success(ctx, 'updated');
+      await this.lessonRepository.save(lesson);
+      const lessonUpdated = await this.findLessonById(id);
+      this.logger.success(ctx, ACTIONS.UPDATED);
+
       return ResponseFactory.success<LessonResponseDto>(
         generateMessage('updated', this._entity, id),
-        LessonResponseDto.fromEntity(lesson),
+        LessonResponseDto.fromEntity(lessonUpdated),
       );
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity, id);
@@ -366,13 +411,13 @@ export class LessonService {
           deletedAt: Not(IsNull()),
         },
         order: { position: 'ASC' },
-        relations: ['chapter'],
+        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
       });
 
       if (!lessonsDeleted.data.length) {
-        this.logger.warn(ctx, 'fetched', 'No deleted lessons found');
+        this.logger.warn(ctx, ACTIONS.FETCHED, 'No deleted lessons found');
       } else {
-        this.logger.success(ctx, 'fetched');
+        this.logger.success(ctx, ACTIONS.FETCHED);
       }
 
       return lessonsDeleted;
@@ -386,22 +431,16 @@ export class LessonService {
     this.logger.start(ctx);
 
     try {
-      if (!id) {
-        const reason = 'Missing parameter id';
-        this.logger.warn(ctx, 'failed', reason);
-        throw new BadRequestException(
-          generateMessage('failed', this._entity, id, reason),
-        );
-      }
+      this.validateId(id, ctx);
 
       const lesson = await this.findLessonById(id);
       const lessonDeleted = await this.lessonRepository.softRemove(lesson);
       const lessonDeletedResponse = LessonResponseDto.fromEntity(lessonDeleted);
 
-      this.logger.success(ctx, 'deleted');
+      this.logger.success(ctx, ACTIONS.DELETED);
 
       return ResponseFactory.success<LessonResponseDto>(
-        generateMessage('deleted', this._entity, id),
+        generateMessage(ACTIONS.DELETED, this._entity, id),
         lessonDeletedResponse,
       );
     } catch (error) {
@@ -414,35 +453,29 @@ export class LessonService {
     this.logger.start(ctx);
 
     try {
-      if (!id) {
-        const reason = 'Missing parameter id';
-        this.logger.warn(ctx, 'failed', reason);
-        throw new BadRequestException(
-          generateMessage('failed', this._entity, id, reason),
-        );
-      }
+      this.validateId(id, ctx);
 
       const lesson = await this.lessonRepository.findOne({
         where: { id, deletedAt: Not(IsNull()) },
         withDeleted: true,
-        relations: ['chapter'],
+        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
       });
 
       if (!lesson) {
         const reason = 'Not found or not soft-deleted';
-        this.logger.warn(ctx, 'failed', reason);
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
         throw new NotFoundException(
-          generateMessage('failed', this._entity, id, reason),
+          generateMessage(ACTIONS.FAILED, this._entity, id, reason),
         );
       }
 
       const lessonDeleted = await this.lessonRepository.remove(lesson);
       const lessonDeletedResponse = LessonResponseDto.fromEntity(lessonDeleted);
 
-      this.logger.success(ctx, 'deleted');
+      this.logger.success(ctx, ACTIONS.DELETED);
 
       return ResponseFactory.success<LessonResponseDto>(
-        generateMessage('deleted', this._entity, id),
+        generateMessage(ACTIONS.DELETED, this._entity, id),
         lessonDeletedResponse,
       );
     } catch (error) {
@@ -455,38 +488,32 @@ export class LessonService {
     this.logger.start(ctx);
 
     try {
-      if (!id) {
-        const reason = 'Missing parameter id';
-        this.logger.warn(ctx, 'failed', reason);
-        throw new BadRequestException(
-          generateMessage('failed', this._entity, id, reason),
-        );
-      }
+      this.validateId(id, ctx);
 
       const result = await this.lessonRepository.restore(id);
 
       if (result.affected === 0) {
         const reason = 'Not found or already active';
-        this.logger.warn(ctx, 'failed', reason);
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
         throw new NotFoundException(
-          generateMessage('failed', this._entity, id, reason),
+          generateMessage(ACTIONS.FAILED, this._entity, id, reason),
         );
       }
 
       const lesson = await this.findLessonById(id);
       if (!lesson) {
         const reason = 'Not found after restore';
-        this.logger.warn(ctx, 'failed', reason);
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
         throw new NotFoundException(
-          generateMessage('failed', this._entity, id, reason),
+          generateMessage(ACTIONS.FAILED, this._entity, id, reason),
         );
       }
 
       const lessonResponse = LessonResponseDto.fromEntity(lesson);
-      this.logger.success(ctx, 'restored');
+      this.logger.success(ctx, ACTIONS.RESTORED);
 
       return ResponseFactory.success<LessonResponseDto>(
-        generateMessage('restored', this._entity, id),
+        generateMessage(ACTIONS.RESTORED, this._entity, id),
         lessonResponse,
       );
     } catch (error) {
@@ -501,39 +528,39 @@ export class LessonService {
     try {
       if (!ids || ids.length === 0) {
         const reason = 'No lesson IDs provided';
-        this.logger.warn(ctx, 'failed', reason);
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
         throw new BadRequestException(
-          generateMessage('failed', this._entity, undefined, reason),
+          generateMessage(ACTIONS.FAILED, this._entity, undefined, reason),
         );
       }
 
-      this.logger.debug(ctx, 'start', `Restoring IDs: ${ids.join(', ')}`);
+      this.logger.debug(ctx, ACTIONS.START, `Restoring IDs: ${ids.join(', ')}`);
 
       const result = await this.lessonRepository.restore({ id: In(ids) });
 
       if (result.affected === 0) {
         const reason = 'No lessons found to restore';
-        this.logger.warn(ctx, 'failed', reason);
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
         throw new NotFoundException(
-          generateMessage('failed', this._entity, undefined, reason),
+          generateMessage(ACTIONS.FAILED, this._entity, undefined, reason),
         );
       }
 
       const lessons = await this.lessonRepository.find({
         where: { id: In(ids) },
-        relations: ['chapter'],
+        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
       });
 
       if (!lessons.length) {
         const reason = 'Lessons not found after restore';
-        this.logger.warn(ctx, 'failed', reason);
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
         throw new NotFoundException(
-          generateMessage('failed', this._entity, undefined, reason),
+          generateMessage(ACTIONS.FAILED, this._entity, undefined, reason),
         );
       }
 
       const lessonsResponse = LessonResponseDto.fromEntities(lessons);
-      this.logger.success(ctx, 'restored');
+      this.logger.success(ctx, ACTIONS.RESTORED);
 
       return ResponseFactory.success<LessonResponseDto[]>(
         `${lessons.length} lessons restored successfully`,
@@ -553,18 +580,18 @@ export class LessonService {
       const { ids, status } = changeLessonStatusDto;
       this.logger.debug(
         ctx,
-        'start',
+        ACTIONS.START,
         `Updating status for lessons with IDs: ${ids.join(', ')}, new status: ${status}`,
       );
 
       const lessons = await this.lessonRepository.find({
         where: { id: In(ids) },
-        relations: ['chapter'],
+        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
       });
 
       if (!lessons.length) {
         const reason = `No lessons found with IDs: ${ids.join(', ')}`;
-        this.logger.warn(ctx, 'failed', reason);
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
         throw new NotFoundException(reason);
       }
 
@@ -575,11 +602,11 @@ export class LessonService {
       await this.lessonRepository.save(lessons);
       const records = await this.lessonRepository.find({
         where: { id: In(ids) },
-        relations: ['chapter'],
+        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
       });
-      this.logger.success(ctx, 'updated');
+      this.logger.success(ctx, ACTIONS.UPDATED);
       return ResponseFactory.success<LessonResponseDto[]>(
-        generateMessage('updated', this._entity),
+        generateMessage(ACTIONS.UPDATED, this._entity),
         LessonResponseDto.fromEntities(records),
       );
     } catch (error) {
@@ -598,26 +625,26 @@ export class LessonService {
     try {
       if (!changLessonPositionDtos.length) {
         const reason = 'No lessons provided';
-        this.logger.warn(ctx, 'failed', reason);
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
         throw new BadRequestException(
-          generateMessage('updated', this._entity, undefined, reason),
+          generateMessage(ACTIONS.UPDATED, this._entity, undefined, reason),
         );
       }
 
       const ids = changLessonPositionDtos.map((d) => d.id);
       this.logger.debug(
         ctx,
-        'start',
+        ACTIONS.START,
         `Updating positions for lessons with IDs: ${ids.join(', ')}`,
       );
       const lessons = await this.lessonRepository.find({
         where: { id: In(ids) },
-        relations: ['chapter'],
+        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
       });
 
       if (!lessons.length) {
         const reason = `No lessons found with IDs: ${ids.join(', ')}`;
-        this.logger.warn(ctx, 'failed', reason);
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
         throw new NotFoundException(reason);
       }
 
@@ -631,9 +658,9 @@ export class LessonService {
       await this.lessonRepository.save(lessons);
       const records = await this.lessonRepository.find({
         where: { id: In(ids) },
-        relations: ['chapter'],
+        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
       });
-      this.logger.success(ctx, 'updated');
+      this.logger.success(ctx, ACTIONS.UPDATED);
       return ResponseFactory.success<LessonResponseDto[]>(
         `Updated positions for ${records.length} lessons`,
         LessonResponseDto.fromEntities(records),
@@ -648,20 +675,14 @@ export class LessonService {
     this.logger.start(ctx);
 
     try {
-      if (!id) {
-        const reason = 'Missing parameter id';
-        this.logger.warn(ctx, 'failed', reason);
-        throw new BadRequestException(
-          generateMessage('failed', this._entity, id, reason),
-        );
-      }
+      this.validateId(id, ctx);
 
       const lesson = await this.findLessonById(id);
       lesson.lessonStatus = status;
       const record = await this.lessonRepository.save(lesson);
-      this.logger.success(ctx, 'updated');
+      this.logger.success(ctx, ACTIONS.UPDATED);
       return ResponseFactory.success<LessonResponseDto>(
-        generateMessage('updated', this._entity, id),
+        generateMessage(ACTIONS.UPDATED, this._entity, id),
         LessonResponseDto.fromEntity(record),
       );
     } catch (error) {

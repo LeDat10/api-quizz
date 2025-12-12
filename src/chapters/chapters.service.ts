@@ -68,7 +68,7 @@ export class ChaptersService {
 
       const chapter = await this.chapterRepository.findOne({
         where: { id },
-        relations: ['course', 'lessons'],
+        relations: ['course'],
       });
 
       if (!chapter) {
@@ -98,7 +98,7 @@ export class ChaptersService {
         ChapterResponseDto
       >(paginationQueryDto, this.chapterRepository, this.transform, {
         order: { position: 'ASC' },
-        relations: ['course', 'lessons'],
+        relations: ['course'],
       });
 
       if (!chapters.data.length) {
@@ -285,7 +285,7 @@ export class ChaptersService {
         where: {
           deletedAt: Not(IsNull()),
         },
-        relations: ['course', 'lessons'],
+        relations: ['course'],
         order: { position: 'ASC' },
       });
       if (!chaptersDeleted.data.length) {
@@ -314,7 +314,7 @@ export class ChaptersService {
 
       const chapter = await this.chapterRepository.findOne({
         where: { id },
-        relations: ['course', 'lessons'],
+        relations: ['course'],
       });
 
       if (!chapter) {
@@ -365,7 +365,7 @@ export class ChaptersService {
       const chapter = await this.chapterRepository.findOne({
         withDeleted: true,
         where: { id, deletedAt: Not(IsNull()) },
-        relations: ['course', 'lessons'],
+        relations: ['course'],
       });
 
       if (!chapter) {
@@ -462,7 +462,7 @@ export class ChaptersService {
 
       const chapters = await this.chapterRepository.find({
         where: { id: In(ids) },
-        relations: ['course', 'lessons'],
+        relations: ['course'],
       });
 
       if (!chapters.length) {
@@ -510,7 +510,7 @@ export class ChaptersService {
       await this.chapterRepository.save(chapters);
       const records = await this.chapterRepository.find({
         where: { id: In(ids) },
-        relations: ['course', 'lessons'],
+        relations: ['course'],
       });
       this.logger.success(ctx, 'updated');
       return ResponseFactory.success<ChapterResponseDto[]>(
@@ -567,7 +567,7 @@ export class ChaptersService {
       await this.chapterRepository.save(chapters);
       const records = await this.chapterRepository.find({
         where: { id: In(ids) },
-        relations: ['course', 'lessons'],
+        relations: ['course'],
       });
       this.logger.success(ctx, 'updated');
       return ResponseFactory.success<ChapterResponseDto[]>(
@@ -630,7 +630,7 @@ export class ChaptersService {
       const chapters = await this.chapterRepository.find({
         where: { course },
         order: { position: 'asc' },
-        relations: ['course', 'lessons'],
+        relations: ['course'],
       });
 
       this.logger.success(ctx, 'fetched');
