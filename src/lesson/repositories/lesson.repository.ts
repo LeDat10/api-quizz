@@ -60,7 +60,7 @@ export class LessonCustomRepository {
     });
   }
 
-  async findByIds(ids: number[]): Promise<Lesson[]> {
+  async findByIds(ids: string[]): Promise<Lesson[]> {
     return this.repository.find({
       where: { id: In(ids) },
       relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],

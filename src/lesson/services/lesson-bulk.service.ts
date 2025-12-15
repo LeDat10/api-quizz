@@ -1,5 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { DataSource, Repository } from 'typeorm';
 import { Lesson } from '../lesson.entity';
 import { LoggerHelper } from 'src/common/helpers/logger/logger.helper';
 import { ErrorHandlerHelper } from 'src/common/helpers/error/handle-error.helper';
@@ -8,6 +12,11 @@ import { validateLessonIds } from '../helpers/lesson-validator.helper';
 import { LessonType } from '../enums/lesson.enum';
 import { ContentLesson } from 'src/content-lesson/content-lesson.entity';
 import { ResponseFactory } from 'src/common/response/factories/response.factory';
+import { ChangeLessonPositionDto } from '../dtos/change-lesson-position.dto';
+import { generateMessage } from 'src/common/utils/generateMessage.util';
+import { ACTIONS } from 'src/common/common.type';
+import { InjectRepository } from '@nestjs/typeorm';
+import { LessonResponseDto } from '../dtos/lesson-response.dto';
 
 @Injectable()
 export class LessonBulkService {
@@ -18,6 +27,8 @@ export class LessonBulkService {
   private _entity = 'Lesson';
 
   constructor(
+    @InjectRepository(Lesson)
+    private readonly lessonRepository: Repository<Lesson>,
     private readonly connection: DataSource,
     private readonly lessonCustomRepository: LessonCustomRepository,
   ) {}
@@ -361,6 +372,59 @@ export class LessonBulkService {
       return this.errorHandler.handle(ctx, error, this._entity);
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  public async updatePositionMany(
+    changLessonPositionDtos: ChangeLessonPositionDto[],
+  ) {
+    const ctx = {
+      method: 'updatePositionMany',
+      entity: this._entity,
+    };
+    this.logger.start(ctx);
+    let lessonIds: string[] = [];
+    try {
+      if (!changLessonPositionDtos.length) {
+        const reason = 'No lessons provided';
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
+        throw new BadRequestException(
+          generateMessage(ACTIONS.UPDATED, this._entity, undefined, reason),
+        );
+      }
+
+      lessonIds = changLessonPositionDtos.map((d) => d.id);
+
+      validateLessonIds(lessonIds, ctx, this.logger);
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+
+    try {
+      const existingLessons =
+        await this.lessonCustomRepository.findByIds(lessonIds);
+
+      if (existingLessons.length === 0) {
+        const reason = `No lessons found with IDs: ${lessonIds.join(', ')}`;
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
+        throw new NotFoundException(reason);
+      }
+
+      for (const lesson of existingLessons) {
+        const dto = changLessonPositionDtos.find((d) => d.id === lesson.id);
+        if (dto) {
+          lesson.position = dto.position;
+        }
+      }
+
+      const updatedLessons = await this.lessonRepository.save(existingLessons);
+      this.logger.success(ctx, ACTIONS.UPDATED);
+      return ResponseFactory.success<LessonResponseDto[]>(
+        `Updated positions for ${updatedLessons.length} lessons`,
+        LessonResponseDto.fromEntities(updatedLessons),
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
     }
   }
 }

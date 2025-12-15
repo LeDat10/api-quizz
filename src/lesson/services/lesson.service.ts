@@ -496,57 +496,9 @@ export class LessonService {
   public async changeLessonPositionMultiple(
     changLessonPositionDtos: ChangeLessonPositionDto[],
   ) {
-    const ctx = {
-      method: 'changelessonPositionMultiple',
-      entity: this._entity,
-    };
-    this.logger.start(ctx);
-    try {
-      if (!changLessonPositionDtos.length) {
-        const reason = 'No lessons provided';
-        this.logger.warn(ctx, ACTIONS.FAILED, reason);
-        throw new BadRequestException(
-          generateMessage(ACTIONS.UPDATED, this._entity, undefined, reason),
-        );
-      }
-
-      const ids = changLessonPositionDtos.map((d) => d.id);
-      this.logger.debug(
-        ctx,
-        ACTIONS.START,
-        `Updating positions for lessons with IDs: ${ids.join(', ')}`,
-      );
-      const lessons = await this.lessonRepository.find({
-        where: { id: In(ids) },
-        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
-      });
-
-      if (!lessons.length) {
-        const reason = `No lessons found with IDs: ${ids.join(', ')}`;
-        this.logger.warn(ctx, ACTIONS.FAILED, reason);
-        throw new NotFoundException(reason);
-      }
-
-      for (const lesson of lessons) {
-        const dto = changLessonPositionDtos.find((d) => d.id === lesson.id);
-        if (dto) {
-          lesson.position = dto.position;
-        }
-      }
-
-      await this.lessonRepository.save(lessons);
-      const records = await this.lessonRepository.find({
-        where: { id: In(ids) },
-        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
-      });
-      this.logger.success(ctx, ACTIONS.UPDATED);
-      return ResponseFactory.success<LessonResponseDto[]>(
-        `Updated positions for ${records.length} lessons`,
-        LessonResponseDto.fromEntities(records),
-      );
-    } catch (error) {
-      return this.errorHandler.handle(ctx, error, this._entity);
-    }
+    return await this.lessonBulkService.updatePositionMany(
+      changLessonPositionDtos,
+    );
   }
 
   public async changeLessonStatus(id: string, status: LessonStatus) {
