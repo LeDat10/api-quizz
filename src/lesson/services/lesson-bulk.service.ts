@@ -17,6 +17,7 @@ import { generateMessage } from 'src/common/utils/generateMessage.util';
 import { ACTIONS } from 'src/common/common.type';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessonResponseDto } from '../dtos/lesson-response.dto';
+import { ChangeLessonStatusDto } from '../dtos/change-lesson-status.dto';
 
 @Injectable()
 export class LessonBulkService {
@@ -421,6 +422,37 @@ export class LessonBulkService {
       this.logger.success(ctx, ACTIONS.UPDATED);
       return ResponseFactory.success<LessonResponseDto[]>(
         `Updated positions for ${updatedLessons.length} lessons`,
+        LessonResponseDto.fromEntities(updatedLessons),
+      );
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async changeStatusMany(changeLessonStatusDto: ChangeLessonStatusDto) {
+    const ctx = { method: 'changeStatusMany', entity: this._entity };
+    this.logger.start(ctx);
+
+    try {
+      const { ids, status } = changeLessonStatusDto;
+
+      const existingLessons = await this.lessonCustomRepository.findByIds(ids);
+
+      if (!existingLessons.length) {
+        const reason = `No lessons found with IDs: ${ids.join(', ')}`;
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
+        throw new NotFoundException(reason);
+      }
+
+      for (const lesson of existingLessons) {
+        lesson.lessonStatus = status;
+      }
+
+      const updatedLessons = await this.lessonRepository.save(existingLessons);
+      this.logger.success(ctx, ACTIONS.UPDATED);
+
+      return ResponseFactory.success<LessonResponseDto[]>(
+        generateMessage(ACTIONS.UPDATED, this._entity),
         LessonResponseDto.fromEntities(updatedLessons),
       );
     } catch (error) {

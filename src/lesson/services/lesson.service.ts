@@ -453,44 +453,7 @@ export class LessonService {
   public async changeLessonStatusMultiple(
     changeLessonStatusDto: ChangeLessonStatusDto,
   ) {
-    const ctx = { method: 'changeLessonStatusMultiple', entity: this._entity };
-    this.logger.start(ctx);
-    try {
-      const { ids, status } = changeLessonStatusDto;
-      this.logger.debug(
-        ctx,
-        ACTIONS.START,
-        `Updating status for lessons with IDs: ${ids.join(', ')}, new status: ${status}`,
-      );
-
-      const lessons = await this.lessonRepository.find({
-        where: { id: In(ids) },
-        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
-      });
-
-      if (!lessons.length) {
-        const reason = `No lessons found with IDs: ${ids.join(', ')}`;
-        this.logger.warn(ctx, ACTIONS.FAILED, reason);
-        throw new NotFoundException(reason);
-      }
-
-      for (const lesson of lessons) {
-        lesson.lessonStatus = status;
-      }
-
-      await this.lessonRepository.save(lessons);
-      const records = await this.lessonRepository.find({
-        where: { id: In(ids) },
-        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
-      });
-      this.logger.success(ctx, ACTIONS.UPDATED);
-      return ResponseFactory.success<LessonResponseDto[]>(
-        generateMessage(ACTIONS.UPDATED, this._entity),
-        LessonResponseDto.fromEntities(records),
-      );
-    } catch (error) {
-      return this.errorHandler.handle(ctx, error, this._entity);
-    }
+    return await this.lessonBulkService.changeStatusMany(changeLessonStatusDto);
   }
 
   public async changeLessonPositionMultiple(
