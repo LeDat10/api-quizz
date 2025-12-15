@@ -56,7 +56,7 @@ export class ContentLessonService {
     }
   }
 
-  public async findContentLessonByLessonId(lessonId: number) {
+  public async findContentLessonByLessonId(lessonId: string) {
     const ctx = {
       method: 'findContentLessonByLessonId',
       entity: this._entity,

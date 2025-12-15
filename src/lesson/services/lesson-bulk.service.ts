@@ -27,7 +27,7 @@ export class LessonBulkService {
     private readonly lessonCustomRepository: LessonCustomRepository,
   ) {}
 
-  async softDeleteMany(lessonIds: number[]) {
+  async softDeleteMany(lessonIds: string[]) {
     const ctx = { method: 'softDeleteMany', entity: this._entity };
     this.logger.start(ctx);
 
@@ -143,7 +143,7 @@ export class LessonBulkService {
     }
   }
 
-  public async hardDeleteMany(lessonIds: number[]) {
+  public async hardDeleteMany(lessonIds: string[]) {
     const ctx = { method: 'hardDeleteMany', entity: this._entity };
     this.logger.start(ctx);
 

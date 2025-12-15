@@ -11,7 +11,7 @@ export class LessonCrudHelper {
   static async generateUniqueSlug(
     title: string,
     repository: LessonCustomRepository,
-    excludeId?: number,
+    excludeId?: string,
   ): Promise<string> {
     let slug = generateSlug(title);
     const exists = await repository.isSlugExists(slug, excludeId);

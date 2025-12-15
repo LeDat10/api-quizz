@@ -69,8 +69,8 @@ export class LessonService {
     };
   };
 
-  public async findLessonById(id: number) {
-    const ctx = { method: 'findLessonById', entity: this._entity, id };
+  public async findLessonById(id: string) {
+    const ctx = { method: 'findLessonById', entity: this._entity };
     this.logger.start(ctx);
 
     try {
@@ -114,8 +114,8 @@ export class LessonService {
     }
   }
 
-  public async getDetailLesson(id: number) {
-    const ctx = { method: 'getDetailLesson', entity: this._entity, id };
+  public async getDetailLesson(id: string) {
+    const ctx = { method: 'getDetailLesson', entity: this._entity };
     this.logger.start(ctx);
 
     try {
@@ -190,8 +190,8 @@ export class LessonService {
     }
   }
 
-  public async updateLesson(id: number, updateLessonDto: BaseUpdateLessonDto) {
-    const ctx = { method: 'updateLesson', entity: this._entity, id };
+  public async updateLesson(id: string, updateLessonDto: BaseUpdateLessonDto) {
+    const ctx = { method: 'updateLesson', entity: this._entity };
     this.logger.start(ctx);
 
     try {
@@ -278,8 +278,8 @@ export class LessonService {
     }
   }
 
-  public async softDeleteLesson(id: number) {
-    const ctx = { method: 'softDeleteLesson', entity: this._entity, id };
+  public async softDeleteLesson(id: string) {
+    const ctx = { method: 'softDeleteLesson', entity: this._entity };
     this.logger.start(ctx);
 
     try {
@@ -331,12 +331,12 @@ export class LessonService {
     }
   }
 
-  public async softDeleteManyLessons(lessonIds: number[]) {
+  public async softDeleteManyLessons(lessonIds: string[]) {
     return await this.lessonBulkService.softDeleteMany(lessonIds);
   }
 
-  public async hardDeleteLesson(id: number) {
-    const ctx = { method: 'hardDeleteLesson', entity: this._entity, id };
+  public async hardDeleteLesson(id: string) {
+    const ctx = { method: 'hardDeleteLesson', entity: this._entity };
     this.logger.start(ctx);
 
     try {
@@ -378,12 +378,12 @@ export class LessonService {
     }
   }
 
-  public async hardDeleteManyLessons(lessonIds: number[]) {
+  public async hardDeleteManyLessons(lessonIds: string[]) {
     return await this.lessonBulkService.hardDeleteMany(lessonIds);
   }
 
-  public async restoreLesson(id: number) {
-    const ctx = { method: 'restoreLesson', entity: this._entity, id };
+  public async restoreLesson(id: string) {
+    const ctx = { method: 'restoreLesson', entity: this._entity };
     this.logger.start(ctx);
 
     try {
@@ -569,7 +569,7 @@ export class LessonService {
     }
   }
 
-  public async changeLessonStatus(id: number, status: LessonStatus) {
+  public async changeLessonStatus(id: string, status: LessonStatus) {
     const ctx = { method: 'changeLessonStatus', entity: this._entity };
     this.logger.start(ctx);
 

@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -254,9 +255,10 @@ export class LessonController {
   })
   @ApiParam({
     name: 'id',
-    type: Number,
-    example: 1,
-    description: 'Lesson ID to retrieve',
+    type: String,
+    format: 'uuid',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: 'Lesson UUID to retrieve',
   })
   @ApiResponse({
     status: 200,
@@ -264,7 +266,7 @@ export class LessonController {
     type: BaseResponseDto<LessonResponseDto>,
   })
   @ApiResponse({ status: 404, description: 'Lesson not found.' })
-  public async GetLessonDetail(@Param('id', ParseIntPipe) id: number) {
+  public async GetLessonDetail(@Param('id', ParseUUIDPipe) id: string) {
     return await this.lessonService.getDetailLesson(id);
   }
 
@@ -301,7 +303,7 @@ export class LessonController {
   // @ApiResponse({ status: 404, description: 'Lesson not found.' })
   // @ApiResponse({ status: 500, description: 'Internal server error' })
   // public async UpdateLesson(
-  //   @Param('id', ParseIntPipe) id: number,
+  //   @Param('id', ParseUUIDPipe) id: string,
   //   @Body() updateLessonDto: UpdateLessonDto,
   // ) {
   //   return await this.lessonService.updateLesson(id, updateLessonDto);
@@ -315,9 +317,11 @@ export class LessonController {
   })
   @ApiParam({
     name: 'id',
+    type: String,
+    format: 'uuid',
     required: true,
-    description: 'ID of the lesson to update',
-    example: 12,
+    description: 'UUID of the lesson to update',
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @ApiBody({
     type: UdpateLessonWithContentDto,
@@ -357,7 +361,7 @@ export class LessonController {
     description: 'Internal server error.',
   })
   public async UpdateLessonContent(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateLessonContentDto: UdpateLessonWithContentDto,
   ) {
     return await this.lessonService.updateLesson(id, updateLessonContentDto);
@@ -371,9 +375,10 @@ export class LessonController {
   })
   @ApiParam({
     name: 'id',
-    type: Number,
-    description: 'The ID of the lesson to update.',
-    example: 1,
+    type: String,
+    format: 'uuid',
+    description: 'The UUID of the lesson to update.',
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @ApiBody({
     schema: {
@@ -407,7 +412,7 @@ export class LessonController {
     description: 'Internal server error.',
   })
   public async ChangeLessonStatus(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body('status') status: LessonStatus,
   ) {
     return await this.lessonService.changeLessonStatus(id, status);
@@ -421,9 +426,10 @@ export class LessonController {
   })
   @ApiParam({
     name: 'id',
-    type: Number,
-    example: 5,
-    description: 'Lesson ID to restore',
+    type: String,
+    format: 'uuid',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: 'Lesson UUID to restore',
   })
   @ApiResponse({
     status: 200,
@@ -435,7 +441,7 @@ export class LessonController {
     description: 'Lesson not found or already active.',
   })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async Restorelesson(@Param('id', ParseIntPipe) id: number) {
+  public async Restorelesson(@Param('id', ParseUUIDPipe) id: string) {
     return await this.lessonService.restoreLesson(id);
   }
 
@@ -447,9 +453,10 @@ export class LessonController {
   })
   @ApiParam({
     name: 'id',
-    type: Number,
-    example: 5,
-    description: 'Lesson ID to soft delete',
+    type: String,
+    format: 'uuid',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: 'Lesson UUID to soft delete',
   })
   @ApiResponse({
     status: 200,
@@ -458,7 +465,7 @@ export class LessonController {
   })
   @ApiResponse({ status: 404, description: 'Lesson not found.' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async SoftDeleteLesson(@Param('id', ParseIntPipe) id: number) {
+  public async SoftDeleteLesson(@Param('id', ParseUUIDPipe) id: string) {
     return await this.lessonService.softDeleteLesson(id);
   }
 
@@ -470,9 +477,10 @@ export class LessonController {
   })
   @ApiParam({
     name: 'id',
-    type: Number,
-    example: 5,
-    description: 'Lesson ID to permanently delete',
+    type: String,
+    format: 'uuid',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: 'Lesson UUID to permanently delete',
   })
   @ApiResponse({
     status: 200,
@@ -484,7 +492,7 @@ export class LessonController {
     description: 'Lesson not found or not soft-deleted.',
   })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async HardDeleteLesson(@Param('id', ParseIntPipe) id: number) {
+  public async HardDeleteLesson(@Param('id', ParseUUIDPipe) id: string) {
     return await this.lessonService.hardDeleteLesson(id);
   }
 }

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, IsUUID } from 'class-validator';
 import { IsNotBlank, Trim } from 'src/common/decorators';
 
 export class CreateContentLessonDto {
@@ -8,7 +8,7 @@ export class CreateContentLessonDto {
   @Trim()
   content: string;
 
-  @IsNumber()
+  @IsUUID()
   @IsNotEmpty()
-  lessonId: number;
+  lessonId: string;
 }

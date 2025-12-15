@@ -29,10 +29,10 @@ export class LessonResponseDto {
   }
 
   @ApiProperty({
-    example: 1,
+    example: '',
     description: 'Unique identifier of the lesson',
   })
-  id: number;
+  id: string;
 
   @ApiProperty({
     example: 'Introduction to ReactJS',

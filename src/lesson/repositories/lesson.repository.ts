@@ -15,7 +15,7 @@ export class LessonCustomRepository {
     private readonly repository: Repository<Lesson>,
   ) {}
 
-  async findByIdWithRelations(id: number): Promise<Lesson | null> {
+  async findByIdWithRelations(id: string): Promise<Lesson | null> {
     return this.repository.findOne({
       where: { id },
       relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
@@ -31,7 +31,7 @@ export class LessonCustomRepository {
     });
   }
 
-  async findDeletedLessonWithIds(ids: number[]): Promise<Lesson[]> {
+  async findDeletedLessonWithIds(ids: string[]): Promise<Lesson[]> {
     return this.repository.find({
       withDeleted: true,
       where: {
@@ -43,7 +43,7 @@ export class LessonCustomRepository {
     });
   }
 
-  async findDeletedLessonWithIdsNotRelations(ids: number[]): Promise<Lesson[]> {
+  async findDeletedLessonWithIdsNotRelations(ids: string[]): Promise<Lesson[]> {
     return this.repository.find({
       withDeleted: true,
       where: {
@@ -61,13 +61,13 @@ export class LessonCustomRepository {
     });
   }
 
-  async findByIdsNotRelations(ids: number[]): Promise<Lesson[]> {
+  async findByIdsNotRelations(ids: string[]): Promise<Lesson[]> {
     return this.repository.find({
       where: { id: In(ids) },
     });
   }
 
-  async isSlugExists(slug: string, excludeId?: number): Promise<boolean> {
+  async isSlugExists(slug: string, excludeId?: string): Promise<boolean> {
     const lesson = await this.repository.findOneBy({ slug });
     return !!lesson && (!excludeId || lesson.id !== excludeId);
   }
@@ -77,7 +77,7 @@ export class LessonCustomRepository {
     return count + 1;
   }
 
-  async findSoftDeletedById(id: number): Promise<Lesson | null> {
+  async findSoftDeletedById(id: string): Promise<Lesson | null> {
     return this.repository.findOne({
       where: { id, deletedAt: Not(IsNull()) },
       withDeleted: true,

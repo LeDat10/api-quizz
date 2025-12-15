@@ -5,7 +5,7 @@ export class ChangeLessonPositionDto {
   @IsNumber()
   @IsNotEmpty()
   @ApiProperty()
-  id: number;
+  id: string;
 
   @IsNotEmpty()
   @IsInt()

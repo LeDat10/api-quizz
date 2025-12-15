@@ -11,16 +11,18 @@ import { LessonStrategyFactory } from './factories/lesson-strategy.factory';
 import { LessonBulkService } from './services/lesson-bulk.service';
 
 @Module({
-  providers: [LessonService],
+  providers: [
+    LessonService,
+    LessonCustomRepository,
+    LessonStrategyFactory,
+    LessonBulkService,
+  ],
   controllers: [LessonController],
   imports: [
     TypeOrmModule.forFeature([Lesson]),
     ChaptersModule,
     PaginationModule,
     ContentLessonModule,
-    LessonCustomRepository,
-    LessonStrategyFactory,
-    LessonBulkService,
   ],
   exports: [LessonService],
 })
