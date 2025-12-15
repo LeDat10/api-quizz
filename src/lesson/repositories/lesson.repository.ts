@@ -22,6 +22,12 @@ export class LessonCustomRepository {
     });
   }
 
+  async findById(id: string): Promise<Lesson | null> {
+    return this.repository.findOne({
+      where: { id },
+    });
+  }
+
   async findDeletedLessons(): Promise<Lesson[]> {
     return this.repository.find({
       withDeleted: true,

@@ -388,8 +388,36 @@ export class LessonService {
 
     try {
       validateId(id, ctx, this.logger);
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity, id);
+    }
 
-      const result = await this.lessonRepository.restore(id);
+    const queryRunner = this.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const existingLessonDeleted =
+        await this.lessonCustomRepository.findSoftDeletedById(id);
+
+      if (!existingLessonDeleted) {
+        const reason = 'Lesson not found or has not been deleted';
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
+        throw new NotFoundException(reason);
+      }
+
+      const strategy = this.strategyFactory.getStrategy(
+        existingLessonDeleted.lessonType,
+      );
+
+      await strategy.restoreData(existingLessonDeleted, queryRunner);
+
+      const result = await queryRunner.manager
+        .createQueryBuilder()
+        .restore()
+        .from(Lesson)
+        .where('id = :id', { id })
+        .execute();
 
       if (result.affected === 0) {
         const reason = 'Not found or already active';
@@ -399,24 +427,22 @@ export class LessonService {
         );
       }
 
-      const lesson = await this.findLessonById(id);
-      if (!lesson) {
-        const reason = 'Not found after restore';
-        this.logger.warn(ctx, ACTIONS.FAILED, reason);
-        throw new NotFoundException(
-          generateMessage(ACTIONS.FAILED, this._entity, id, reason),
-        );
-      }
+      await queryRunner.commitTransaction();
 
-      const lessonResponse = LessonResponseDto.fromEntity(lesson);
       this.logger.success(ctx, ACTIONS.RESTORED);
 
-      return ResponseFactory.success<LessonResponseDto>(
+      return ResponseFactory.success(
         generateMessage(ACTIONS.RESTORED, this._entity, id),
-        lessonResponse,
+        {
+          id,
+          restoredAt: new Date(),
+        },
       );
     } catch (error) {
+      await queryRunner.rollbackTransaction();
       return this.errorHandler.handle(ctx, error, this._entity, id);
+    } finally {
+      await queryRunner.release();
     }
   }
 

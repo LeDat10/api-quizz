@@ -9,6 +9,7 @@ export interface LessonCreator {
   updateData(dto: BaseUpdateLessonDto, lesson: Lesson): Promise<void>;
   cleanupData(lesson: Lesson, queryRunner: QueryRunner): Promise<void>;
   permanentDelete(lesson: Lesson, queryRunner: QueryRunner): Promise<void>;
+  restoreData(lesson: Lesson, queryRunner: QueryRunner): Promise<void>;
 }
 
 // Transformer

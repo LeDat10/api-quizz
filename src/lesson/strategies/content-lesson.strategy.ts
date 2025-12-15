@@ -81,4 +81,15 @@ export class ContentLessonStrategy implements LessonCreator {
       await this.contentLessonService.softDeleteManyContent(lessonIds);
     }
   }
+
+  async restoreData(lesson: Lesson, queryRunner: QueryRunner): Promise<void> {
+    if (lesson.contentLesson) {
+      await queryRunner.manager
+        .createQueryBuilder()
+        .restore()
+        .from(ContentLesson)
+        .where('id = :id', { id: lesson.contentLesson.id })
+        .execute();
+    }
+  }
 }
