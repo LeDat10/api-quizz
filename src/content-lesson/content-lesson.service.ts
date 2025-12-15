@@ -5,12 +5,13 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ContentLesson } from './content-lesson.entity';
-import { Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { LoggerHelper } from 'src/common/helpers/logger/logger.helper';
 import { ErrorHandlerHelper } from 'src/common/helpers/error/handle-error.helper';
 import { generateMessage } from 'src/common/utils/generateMessage.util';
 import { CreateContentLessonDto } from './dtos/create-content-lesson.dto';
 import { UpdateContentlessonDto } from './dtos/update-content-lesson.dto';
+import { ACTIONS } from 'src/common/common.type';
 
 @Injectable()
 export class ContentLessonService {
@@ -113,6 +114,8 @@ export class ContentLessonService {
       });
 
       const record = await this.contentLessonRepository.save(contentLesson);
+
+      this.logger.success(ctx, 'created');
       return record;
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity);
@@ -129,8 +132,111 @@ export class ContentLessonService {
         updateContentLessonDto.id,
       );
       contentLesson.content = updateContentLessonDto.content;
+
+      this.logger.success(ctx, 'updated');
       await this.contentLessonRepository.save(contentLesson);
       return contentLesson;
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+  }
+
+  public async softDeleteContent(contentEntity: ContentLesson) {
+    const ctx = { method: 'softDeleteContent', entity: this._entity };
+    this.logger.start(ctx);
+    try {
+      const contentDeleted =
+        await this.contentLessonRepository.softRemove(contentEntity);
+
+      this.logger.success(ctx, 'deleted');
+      return contentDeleted;
+    } catch (error) {
+      return this.errorHandler.handle(
+        ctx,
+        error,
+        this._entity,
+        contentEntity.id,
+      );
+    }
+  }
+
+  public async hardDeleteContent(contentEntity: ContentLesson) {
+    const ctx = { method: 'hardDeleteContent', entity: this._entity };
+    this.logger.start(ctx);
+    try {
+      const content = await this.contentLessonRepository.findOne({
+        where: { id: contentEntity.id },
+        withDeleted: true,
+      });
+
+      if (!content) {
+        const reason = 'Not found or not soft-deleted';
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
+        throw new NotFoundException(
+          generateMessage(
+            ACTIONS.FAILED,
+            this._entity,
+            contentEntity.id,
+            reason,
+          ),
+        );
+      }
+
+      const contentDeleted = await this.contentLessonRepository.remove(content);
+      this.logger.success(ctx, 'deleted');
+      return contentDeleted;
+    } catch (error) {
+      return this.errorHandler.handle(
+        ctx,
+        error,
+        this._entity,
+        contentEntity.id,
+      );
+    }
+  }
+
+  public async softDeleteManyContent(lessonIds: number[]) {
+    const ctx = { method: 'softDeleteManyContent', entity: this._entity };
+    this.logger.start(ctx);
+    try {
+      if (!lessonIds || !lessonIds.length) {
+        const reason = 'lessonIds must not be empty';
+        this.logger.warn(ctx, 'deleted', reason);
+        throw new BadRequestException(reason);
+      }
+
+      const existingContents = await this.contentLessonRepository.find({
+        where: {
+          lesson: {
+            id: In(lessonIds),
+          },
+          deletedAt: IsNull(),
+        },
+        select: ['id'],
+      });
+
+      if (!existingContents.length) {
+        const reason =
+          'No active content lessons found for the provided lesson IDs.';
+        this.logger.warn(ctx, 'failed', reason);
+        throw new NotFoundException(reason);
+      }
+
+      const contentLessonIds = existingContents.map((cl) => cl.id);
+
+      const result = await this.contentLessonRepository
+        .createQueryBuilder()
+        .softDelete()
+        .where('id IN (:...ids)', { ids: contentLessonIds })
+        .execute();
+
+      if (result.affected === 0) {
+        const reason = 'No content lessons found for the given ids';
+        this.logger.warn(ctx, 'deleted', reason);
+        throw new NotFoundException(reason);
+      }
+
+      return result;
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity);
     }

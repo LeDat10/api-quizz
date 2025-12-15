@@ -19,7 +19,7 @@ import {
   ApiBody,
   ApiQuery,
 } from '@nestjs/swagger';
-import { LessonService } from './lesson.service';
+import { LessonService } from './services/lesson.service';
 import { UpdateLessonDto } from './dtos/update-lesson.dto';
 import { LessonResponseDto } from './dtos/lesson-response.dto';
 import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';

@@ -3,206 +3,34 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { In, IsNull, Not, Repository } from 'typeorm';
-import { Lesson } from './lesson.entity';
+import { DataSource, In, IsNull, Not, Repository } from 'typeorm';
+import { Lesson } from '../lesson.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessonResponseDto } from './dtos/lesson-response.dto';
+import { LessonResponseDto } from '../dtos/lesson-response.dto';
 import { ChaptersService } from 'src/chapters/chapters.service';
-import {
-  generateRadomString,
-  generateSlug,
-} from 'src/common/utils/course.util';
 import { generateMessage } from 'src/common/utils/generateMessage.util';
 import { ResponseFactory } from 'src/common/response/factories/response.factory';
 import { PaginationProvider } from 'src/common/pagination/pagination.provider';
 import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';
 import { LoggerHelper } from 'src/common/helpers/logger/logger.helper';
 import { ErrorHandlerHelper } from 'src/common/helpers/error/handle-error.helper';
-import { ChangeLessonStatusDto } from './dtos/change-lesson-status.dto';
-import { ChangeLessonPositionDto } from './dtos/change-lesson-position.dto';
-import { LessonStatus, LessonType } from './enums/lesson.enum';
-import { ContentLessonService } from 'src/content-lesson/content-lesson.service';
-import { BaseCreateLessonDto } from './dtos/base-create-lesson.dto';
-import { CreateLessonWithContentDto } from './dtos/create-lesson-with-content.dto';
-import { ContentLessonResponseDto } from 'src/content-lesson/dtos/content-lesson-response.dto';
-import { BaseUpdateLessonDto } from './dtos/base-update-lesson.dto';
-import { UdpateLessonWithContentDto } from './dtos/update-lesson-with-content.dto';
-import { v4 as uuidv4 } from 'uuid';
-
-export const ACTIONS = {
-  CREATED: 'created',
-  UPDATED: 'updated',
-  DELETED: 'deleted',
-  RESTORED: 'restored',
-  FETCHED: 'fetched',
-  START: 'start',
-  FAILED: 'failed',
-} as const;
+import { ChangeLessonStatusDto } from '../dtos/change-lesson-status.dto';
+import { ChangeLessonPositionDto } from '../dtos/change-lesson-position.dto';
+import { LessonStatus } from '../enums/lesson.enum';
+import { BaseCreateLessonDto } from '../dtos/base-create-lesson.dto';
+import { BaseUpdateLessonDto } from '../dtos/base-update-lesson.dto';
+import { ACTIONS } from 'src/common/common.type';
+import { validateId } from '../helpers/lesson-validator.helper';
+import { LessonTransformerFactory } from '../factories/lesson-transformer.factory';
+import { LessonStrategyFactory } from '../factories/lesson-strategy.factory';
+import { LessonCustomRepository } from '../repositories/lesson.repository';
+import { LessonBulkService } from './lesson-bulk.service';
+import { LessonCrudHelper } from '../helpers/lesson-crud.helper';
 
 const TABLE_RELATIONS = {
   CONTENT: 'contentLesson',
   CHAPTER: 'chapter',
 } as const;
-
-// Transformer
-interface ILessonDataTransformer {
-  transform(lesson: Lesson): any;
-}
-
-class ContentLessonTransformer implements ILessonDataTransformer {
-  transform(lesson: Lesson): ContentLessonResponseDto | null {
-    if (!lesson.contentLesson) {
-      return null;
-    }
-    return ContentLessonResponseDto.fromEntity(lesson.contentLesson);
-  }
-}
-
-class QuizLessonTransformer implements ILessonDataTransformer {
-  transform(lesson: Lesson): any {
-    // TODO: Implement when QuizLesson feature is added
-    // return QuizLessonResponseDto.fromEntity(lesson.quizLesson);
-    return null;
-  }
-}
-
-class AssignmentLessonTransformer implements ILessonDataTransformer {
-  transform(lesson: Lesson): any {
-    // TODO: Implement when VideoLesson feature is added
-    // return AssignmentLessonTransformer.fromEntity(lesson.videoLesson);
-    return null;
-  }
-}
-
-class PdfLessonTransformer implements ILessonDataTransformer {
-  transform(lesson: Lesson): any {
-    // TODO: Implement when VideoLesson feature is added
-    // return PdfLessonTransformer.fromEntity(lesson.videoLesson);
-    return null;
-  }
-}
-
-class DefaultLessonTransformer implements ILessonDataTransformer {
-  transform(lesson: Lesson): null {
-    return null;
-  }
-}
-
-// Create Strategy Pattern
-interface LessonCreator {
-  validate(dto: BaseCreateLessonDto): void;
-  prepareData(dto: BaseCreateLessonDto, lesson: Lesson): Promise<void>;
-  updateData(dto: BaseUpdateLessonDto, lesson: Lesson): Promise<void>;
-}
-
-class ContentLessonCreator implements LessonCreator {
-  constructor(private contentLessonService: ContentLessonService) {}
-
-  validate(dto: BaseCreateLessonDto): void {
-    const contentDto = dto as CreateLessonWithContentDto;
-    if (!contentDto.content) {
-      throw new BadRequestException(
-        'Content is required for CONTENT type lesson',
-      );
-    }
-  }
-
-  async prepareData(dto: BaseCreateLessonDto, lesson: Lesson): Promise<void> {
-    const contentDto = dto as CreateLessonWithContentDto;
-    if (!contentDto.content) return;
-
-    await this.contentLessonService.createContentlesson({
-      lessonId: lesson.id,
-      content: contentDto.content,
-    });
-  }
-
-  async updateData(dto: BaseUpdateLessonDto, lesson: Lesson): Promise<void> {
-    const contentDto = dto as UdpateLessonWithContentDto;
-
-    if (!contentDto.content) {
-      return;
-    }
-
-    if (lesson.contentLesson) {
-      await this.contentLessonService.updateContentLesson({
-        id: lesson.contentLesson.id,
-        content: contentDto.content,
-      });
-    } else {
-      await this.contentLessonService.createContentlesson({
-        lessonId: lesson.id,
-        content: contentDto.content,
-      });
-    }
-  }
-}
-
-class AssignmentLessonCreator implements LessonCreator {
-  constructor(private contentLessonService: ContentLessonService) {}
-  updateData(dto: BaseUpdateLessonDto, lesson: Lesson): Promise<void> {
-    throw new Error('Method not implemented.');
-  }
-
-  validate(dto: BaseCreateLessonDto): void {
-    // const contentDto = dto as CreateLessonWithContentDto;
-    // if (!contentDto.content) {
-    //   throw new BadRequestException('Content is required for CONTENT type lesson');
-    // }
-  }
-
-  async prepareData(dto: BaseCreateLessonDto, lesson: Lesson): Promise<void> {
-    // const contentDto = dto as CreateLessonWithContentDto;
-    // await this.contentLessonService.createContentlesson({
-    //   lessonId: lesson.id,
-    //   content: contentDto.content,
-    // });
-  }
-}
-
-class QuizLessonCreator implements LessonCreator {
-  constructor(private contentLessonService: ContentLessonService) {}
-  updateData(dto: BaseUpdateLessonDto, lesson: Lesson): Promise<void> {
-    throw new Error('Method not implemented.');
-  }
-
-  validate(dto: BaseCreateLessonDto): void {
-    // const contentDto = dto as CreateLessonWithContentDto;
-    // if (!contentDto.content) {
-    //   throw new BadRequestException('Content is required for CONTENT type lesson');
-    // }
-  }
-
-  async prepareData(dto: BaseCreateLessonDto, lesson: Lesson): Promise<void> {
-    // const contentDto = dto as CreateLessonWithContentDto;
-    // await this.contentLessonService.createContentlesson({
-    //   lessonId: lesson.id,
-    //   content: contentDto.content,
-    // });
-  }
-}
-
-class PdfLessonCreator implements LessonCreator {
-  constructor(private contentLessonService: ContentLessonService) {}
-  updateData(dto: BaseUpdateLessonDto, lesson: Lesson): Promise<void> {
-    throw new Error('Method not implemented.');
-  }
-
-  validate(dto: BaseCreateLessonDto): void {
-    // const contentDto = dto as CreateLessonWithContentDto;
-    // if (!contentDto.content) {
-    //   throw new BadRequestException('Content is required for CONTENT type lesson');
-    // }
-  }
-
-  async prepareData(dto: BaseCreateLessonDto, lesson: Lesson): Promise<void> {
-    // const contentDto = dto as CreateLessonWithContentDto;
-    // await this.contentLessonService.createContentlesson({
-    //   lessonId: lesson.id,
-    //   content: contentDto.content,
-    // });
-  }
-}
 
 @Injectable()
 export class LessonService {
@@ -210,40 +38,21 @@ export class LessonService {
   private readonly errorHandler = new ErrorHandlerHelper(LessonService.name);
   private _entity = 'Lesson';
 
-  private readonly transformers: Record<LessonType, ILessonDataTransformer> = {
-    [LessonType.CONTENT]: new ContentLessonTransformer(),
-    [LessonType.ASSIGNMENT]: new AssignmentLessonTransformer(),
-    [LessonType.QUIZ]: new QuizLessonTransformer(),
-    [LessonType.PDF]: new PdfLessonTransformer(),
-    // Add more lesson types here as needed
-  };
-
-  private readonly defaultTransformer = new DefaultLessonTransformer();
-
-  private readonly lessonCreators: Record<LessonType, LessonCreator>;
-
   constructor(
     @InjectRepository(Lesson)
     private readonly lessonRepository: Repository<Lesson>,
     private readonly chapterService: ChaptersService,
     private readonly paginationProvider: PaginationProvider,
-    private readonly contentLessonService: ContentLessonService,
-  ) {
-    this.lessonCreators = {
-      [LessonType.CONTENT]: new ContentLessonCreator(this.contentLessonService),
-      [LessonType.ASSIGNMENT]: new ContentLessonCreator(
-        this.contentLessonService,
-      ),
-      [LessonType.QUIZ]: new ContentLessonCreator(this.contentLessonService),
-      [LessonType.PDF]: new ContentLessonCreator(this.contentLessonService),
-
-      // [LessonType.VIDEO]: new VideoLessonCreator(this.videoLessonService),
-    };
-  }
+    private readonly connection: DataSource,
+    private readonly strategyFactory: LessonStrategyFactory,
+    private readonly lessonCustomRepository: LessonCustomRepository,
+    private readonly lessonBulkService: LessonBulkService,
+  ) {}
 
   private transform = (lesson: Lesson) => {
-    const transformer =
-      this.transformers[lesson.lessonType] || this.defaultTransformer;
+    const transformer = LessonTransformerFactory.getTransformer(
+      lesson.lessonType,
+    );
     const data = lesson.contentLesson ? transformer.transform(lesson) : null;
     return {
       id: lesson.id,
@@ -260,27 +69,15 @@ export class LessonService {
     };
   };
 
-  private validateId(id: number, ctx: any) {
-    if (!id) {
-      const reason = 'Missing parameter id';
-      this.logger.warn(ctx, ACTIONS.FAILED, reason);
-      throw new BadRequestException(
-        generateMessage(ACTIONS.FAILED, this._entity, id, reason),
-      );
-    }
-  }
-
   public async findLessonById(id: number) {
     const ctx = { method: 'findLessonById', entity: this._entity, id };
     this.logger.start(ctx);
 
     try {
-      this.validateId(id, ctx);
+      validateId(id, ctx, this.logger);
 
-      const lesson = await this.lessonRepository.findOne({
-        where: { id },
-        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
-      });
+      const lesson =
+        await this.lessonCustomRepository.findByIdWithRelations(id);
 
       if (!lesson) {
         const reason = 'Not found';
@@ -302,12 +99,6 @@ export class LessonService {
     this.logger.start(ctx);
 
     try {
-      this.logger.debug(
-        ctx,
-        ACTIONS.START,
-        'Querying database for all lessons',
-      );
-
       const lessons = await this.paginationProvider.paginateQuery<
         Lesson,
         LessonResponseDto
@@ -347,7 +138,9 @@ export class LessonService {
     this.logger.start(ctx);
 
     try {
-      const creator = this.lessonCreators[createLessonDto.lessonType];
+      const strategy = this.strategyFactory.getStrategy(
+        createLessonDto.lessonType,
+      );
 
       // Find chapter
       const chapter = await this.chapterService.findChapterById(
@@ -363,41 +156,28 @@ export class LessonService {
       }
 
       // Generate slug
-      let slug = generateSlug(createLessonDto.title);
-      const lessonWithSlugExist = await this.lessonRepository.findOneBy({
-        slug,
-      });
-
-      if (lessonWithSlugExist) {
-        this.logger.warn(
-          ctx,
-          ACTIONS.START,
-          `Slug ${slug} exists, appending random string`,
-        );
-        slug = `${slug}-${generateRadomString()}`;
-      }
+      const slug = await LessonCrudHelper.generateUniqueSlug(
+        createLessonDto.title,
+        this.lessonCustomRepository,
+      );
 
       // Auto-increment position if not provided
-      if (!createLessonDto.position) {
-        const count = await this.lessonRepository.count();
-        createLessonDto.position = count + 1;
-        this.logger.debug(
-          ctx,
-          ACTIONS.START,
-          `Auto-assigned position: ${createLessonDto.position}`,
-        );
-      }
+      const position = await LessonCrudHelper.assignPositionIfNeeded(
+        createLessonDto,
+        this.lessonCustomRepository,
+      );
 
       // Create and save
       const lesson = this.lessonRepository.create({
         ...createLessonDto,
         chapter,
         slug,
+        position,
       });
 
       const savedLesson = await this.lessonRepository.save(lesson);
 
-      await creator.prepareData(createLessonDto, savedLesson);
+      await strategy.prepareData(createLessonDto, savedLesson);
 
       const record = await this.findLessonById(savedLesson.id);
       this.logger.success(ctx, ACTIONS.CREATED);
@@ -415,12 +195,10 @@ export class LessonService {
     this.logger.start(ctx);
 
     try {
-      this.validateId(id, ctx);
+      validateId(id, ctx, this.logger);
 
-      const lesson = await this.lessonRepository.findOne({
-        where: { id },
-        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
-      });
+      const lesson =
+        await this.lessonCustomRepository.findByIdWithRelations(id);
 
       if (!lesson) {
         const reason = 'Not found';
@@ -430,44 +208,23 @@ export class LessonService {
         );
       }
 
-      const creator = this.lessonCreators[lesson.lessonType];
+      const strategy = this.strategyFactory.getStrategy(lesson.lessonType);
 
       // Update chapter if provided
       if (updateLessonDto.chapterId) {
-        this.logger.debug(
-          ctx,
-          ACTIONS.START,
-          `Looking for chapter ID: ${updateLessonDto.chapterId}`,
-        );
-        const chapter = await this.chapterService.findChapterById(
+        await LessonCrudHelper.updateChapterIfProvided(
+          lesson,
           updateLessonDto.chapterId,
+          this.chapterService,
         );
-
-        if (chapter) {
-          lesson.chapter = chapter;
-          this.logger.debug(
-            ctx,
-            ACTIONS.START,
-            `Chapter found: ${chapter.title}`,
-          );
-        }
       }
 
       // Update slug if title changed
       if (updateLessonDto.title && updateLessonDto.title !== lesson.title) {
-        let slug = generateSlug(updateLessonDto.title);
-        const lessonWithSlugExist = await this.lessonRepository.findOneBy({
-          slug,
-        });
-
-        if (lessonWithSlugExist && lessonWithSlugExist.id !== id) {
-          this.logger.warn(
-            ctx,
-            ACTIONS.START,
-            `Slug ${slug} exists, generating new one`,
-          );
-          slug = `${slug}-${generateRadomString()}`;
-        }
+        const slug = await LessonCrudHelper.generateUniqueSlug(
+          updateLessonDto.title,
+          this.lessonCustomRepository,
+        );
 
         lesson.slug = slug;
       }
@@ -479,7 +236,7 @@ export class LessonService {
       Object.assign(lesson, data);
 
       await this.lessonRepository.save(lesson);
-      await creator.updateData(updateLessonDto, lesson);
+      await strategy.updateData(updateLessonDto, lesson);
       const lessonUpdated = await this.findLessonById(id);
       this.logger.success(ctx, ACTIONS.UPDATED);
 
@@ -526,21 +283,56 @@ export class LessonService {
     this.logger.start(ctx);
 
     try {
-      this.validateId(id, ctx);
-
-      const lesson = await this.findLessonById(id);
-      const lessonDeleted = await this.lessonRepository.softRemove(lesson);
-      const lessonDeletedResponse = LessonResponseDto.fromEntity(lessonDeleted);
-
-      this.logger.success(ctx, ACTIONS.DELETED);
-
-      return ResponseFactory.success<LessonResponseDto>(
-        generateMessage(ACTIONS.DELETED, this._entity, id),
-        lessonDeletedResponse,
-      );
+      validateId(id, ctx, this.logger);
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity, id);
     }
+
+    const queryRunner = this.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const existingLesson = await this.findLessonById(id);
+
+      const strategy = this.strategyFactory.getStrategy(
+        existingLesson.lessonType,
+      );
+
+      await strategy.cleanupData(existingLesson, queryRunner);
+
+      await queryRunner.manager
+        .createQueryBuilder()
+        .softDelete()
+        .from(Lesson)
+        .where('id = :id', { id: existingLesson.id })
+        .execute();
+
+      await queryRunner.commitTransaction();
+
+      const deletedLesson =
+        await this.lessonCustomRepository.findSoftDeletedById(
+          existingLesson.id,
+        );
+      this.logger.success(ctx, ACTIONS.DELETED);
+      return ResponseFactory.success(
+        generateMessage(ACTIONS.DELETED, this._entity, id),
+        {
+          id: existingLesson.id,
+          title: existingLesson.title,
+          deletedAt: new Date(),
+        },
+      );
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      return this.errorHandler.handle(ctx, error, this._entity, id);
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  public async softDeleteManyLessons(lessonIds: number[]) {
+    return await this.lessonBulkService.softDeleteMany(lessonIds);
   }
 
   public async hardDeleteLesson(id: number) {
@@ -548,15 +340,22 @@ export class LessonService {
     this.logger.start(ctx);
 
     try {
-      this.validateId(id, ctx);
+      validateId(id, ctx, this.logger);
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity, id);
+    }
 
-      const lesson = await this.lessonRepository.findOne({
-        where: { id, deletedAt: Not(IsNull()) },
-        withDeleted: true,
-        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
-      });
+    const queryRunner = this.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-      if (!lesson) {
+    try {
+      validateId(id, ctx, this.logger);
+
+      const existingLesson =
+        await this.lessonCustomRepository.findByIdWithRelations(id);
+
+      if (!existingLesson) {
         const reason = 'Not found or not soft-deleted';
         this.logger.warn(ctx, ACTIONS.FAILED, reason);
         throw new NotFoundException(
@@ -564,18 +363,23 @@ export class LessonService {
         );
       }
 
-      const lessonDeleted = await this.lessonRepository.remove(lesson);
-      const lessonDeletedResponse = LessonResponseDto.fromEntity(lessonDeleted);
+      const strategy = this.strategyFactory.getStrategy(
+        existingLesson.lessonType,
+      );
+      await strategy.permanentDelete(existingLesson, queryRunner);
 
       this.logger.success(ctx, ACTIONS.DELETED);
-
-      return ResponseFactory.success<LessonResponseDto>(
+      return ResponseFactory.success(
         generateMessage(ACTIONS.DELETED, this._entity, id),
-        lessonDeletedResponse,
+        { id, title: existingLesson.title, deletedAt: new Date() },
       );
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity, id);
     }
+  }
+
+  public async hardDeleteManyLessons(lessonIds: number[]) {
+    return await this.lessonBulkService.hardDeleteMany(lessonIds);
   }
 
   public async restoreLesson(id: number) {
@@ -583,7 +387,7 @@ export class LessonService {
     this.logger.start(ctx);
 
     try {
-      this.validateId(id, ctx);
+      validateId(id, ctx, this.logger);
 
       const result = await this.lessonRepository.restore(id);
 
@@ -770,7 +574,7 @@ export class LessonService {
     this.logger.start(ctx);
 
     try {
-      this.validateId(id, ctx);
+      validateId(id, ctx, this.logger);
 
       const lesson = await this.findLessonById(id);
       lesson.lessonStatus = status;
