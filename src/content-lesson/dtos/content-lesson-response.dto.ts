@@ -8,7 +8,7 @@ export class ContentLessonResponseDto {
   }
 
   @ApiProperty()
-  id: number;
+  id: string;
 
   @ApiProperty()
   content: string;

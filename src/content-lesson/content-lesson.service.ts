@@ -12,6 +12,7 @@ import { generateMessage } from 'src/common/utils/generateMessage.util';
 import { CreateContentLessonDto } from './dtos/create-content-lesson.dto';
 import { UpdateContentlessonDto } from './dtos/update-content-lesson.dto';
 import { ACTIONS } from 'src/common/common.type';
+import { validateId } from 'src/common/helpers/validators/validator.helper';
 
 @Injectable()
 export class ContentLessonService {
@@ -25,17 +26,11 @@ export class ContentLessonService {
     private readonly contentLessonRepository: Repository<ContentLesson>,
   ) {}
 
-  public async findContentLessonById(id: number) {
-    const ctx = { method: 'findContentLessonById', entity: this._entity, id };
+  public async findContentLessonById(id: string) {
+    const ctx = { method: 'findContentLessonById', entity: this._entity };
     this.logger.start(ctx);
     try {
-      if (!id) {
-        const reason = 'Missing parameter id';
-        this.logger.warn(ctx, 'failed', reason);
-        throw new BadRequestException(
-          generateMessage('failed', this._entity, id, reason),
-        );
-      }
+      validateId(id, ctx, this.logger);
 
       const record = await this.contentLessonRepository.findOne({
         where: { id },
@@ -43,13 +38,13 @@ export class ContentLessonService {
 
       if (!record) {
         const reason = 'Not found';
-        this.logger.warn(ctx, 'failed', reason);
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
         throw new NotFoundException(
-          generateMessage('failed', this._entity, id, reason),
+          generateMessage(ACTIONS.FAILED, this._entity, id, reason),
         );
       }
 
-      this.logger.success(ctx, 'fetched');
+      this.logger.success(ctx, ACTIONS.FETCHED);
       return record;
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity, id);
@@ -64,13 +59,7 @@ export class ContentLessonService {
     };
     this.logger.start(ctx);
     try {
-      if (!lessonId) {
-        const reason = 'Missing parameter id';
-        this.logger.warn(ctx, 'failed', reason);
-        throw new BadRequestException(
-          generateMessage('failed', this._entity, lessonId, reason),
-        );
-      }
+      validateId(lessonId, ctx, this.logger);
 
       const record = await this.contentLessonRepository.findOne({
         where: { lesson: { id: lessonId } },
@@ -78,13 +67,13 @@ export class ContentLessonService {
 
       if (!record) {
         const reason = `Not found ContentLesson with Lesson Id: ${lessonId}`;
-        this.logger.warn(ctx, 'failed', reason);
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
         throw new NotFoundException(
-          generateMessage('failed', this._entity, lessonId, reason),
+          generateMessage(ACTIONS.FAILED, this._entity, lessonId, reason),
         );
       }
 
-      this.logger.success(ctx, 'fetched');
+      this.logger.success(ctx, ACTIONS.FETCHED);
       return record;
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity, lessonId);
@@ -115,7 +104,7 @@ export class ContentLessonService {
 
       const record = await this.contentLessonRepository.save(contentLesson);
 
-      this.logger.success(ctx, 'created');
+      this.logger.success(ctx, ACTIONS.CREATED);
       return record;
     } catch (error) {
       return this.errorHandler.handle(ctx, error, this._entity);
@@ -133,7 +122,7 @@ export class ContentLessonService {
       );
       contentLesson.content = updateContentLessonDto.content;
 
-      this.logger.success(ctx, 'updated');
+      this.logger.success(ctx, ACTIONS.UPDATED);
       await this.contentLessonRepository.save(contentLesson);
       return contentLesson;
     } catch (error) {
@@ -148,7 +137,7 @@ export class ContentLessonService {
       const contentDeleted =
         await this.contentLessonRepository.softRemove(contentEntity);
 
-      this.logger.success(ctx, 'deleted');
+      this.logger.success(ctx, ACTIONS.DELETED);
       return contentDeleted;
     } catch (error) {
       return this.errorHandler.handle(
@@ -183,7 +172,7 @@ export class ContentLessonService {
       }
 
       const contentDeleted = await this.contentLessonRepository.remove(content);
-      this.logger.success(ctx, 'deleted');
+      this.logger.success(ctx, ACTIONS.DELETED);
       return contentDeleted;
     } catch (error) {
       return this.errorHandler.handle(
@@ -218,7 +207,7 @@ export class ContentLessonService {
       if (!existingContents.length) {
         const reason =
           'No active content lessons found for the provided lesson IDs.';
-        this.logger.warn(ctx, 'failed', reason);
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
         throw new NotFoundException(reason);
       }
 

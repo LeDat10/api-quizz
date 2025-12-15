@@ -12,8 +12,8 @@ import {
 
 @Entity()
 export class ContentLesson {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({
     type: 'text',
