@@ -446,54 +446,8 @@ export class LessonService {
     }
   }
 
-  public async restoreLessonMultiple(ids: number[]) {
-    const ctx = { method: 'restoreLessonMultiple', entity: this._entity };
-    this.logger.start(ctx);
-
-    try {
-      if (!ids || ids.length === 0) {
-        const reason = 'No lesson IDs provided';
-        this.logger.warn(ctx, ACTIONS.FAILED, reason);
-        throw new BadRequestException(
-          generateMessage(ACTIONS.FAILED, this._entity, undefined, reason),
-        );
-      }
-
-      this.logger.debug(ctx, ACTIONS.START, `Restoring IDs: ${ids.join(', ')}`);
-
-      const result = await this.lessonRepository.restore({ id: In(ids) });
-
-      if (result.affected === 0) {
-        const reason = 'No lessons found to restore';
-        this.logger.warn(ctx, ACTIONS.FAILED, reason);
-        throw new NotFoundException(
-          generateMessage(ACTIONS.FAILED, this._entity, undefined, reason),
-        );
-      }
-
-      const lessons = await this.lessonRepository.find({
-        where: { id: In(ids) },
-        relations: [TABLE_RELATIONS.CHAPTER, TABLE_RELATIONS.CONTENT],
-      });
-
-      if (!lessons.length) {
-        const reason = 'Lessons not found after restore';
-        this.logger.warn(ctx, ACTIONS.FAILED, reason);
-        throw new NotFoundException(
-          generateMessage(ACTIONS.FAILED, this._entity, undefined, reason),
-        );
-      }
-
-      const lessonsResponse = LessonResponseDto.fromEntities(lessons);
-      this.logger.success(ctx, ACTIONS.RESTORED);
-
-      return ResponseFactory.success<LessonResponseDto[]>(
-        `${lessons.length} lessons restored successfully`,
-        lessonsResponse,
-      );
-    } catch (error) {
-      return this.errorHandler.handle(ctx, error, this._entity);
-    }
+  public async restoreLessonMultiple(ids: string[]) {
+    return await this.lessonBulkService.restoreMany(ids);
   }
 
   public async changeLessonStatusMultiple(

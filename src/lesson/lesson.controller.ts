@@ -188,25 +188,54 @@ export class LessonController {
   @ApiOperation({
     summary: 'Restore multiple lessons',
     description:
-      'Restore multiple lessons that have been soft-deleted using a list of lesson IDs.',
+      'Restore multiple lessons that have been soft-deleted using a list of lesson UUIDs.',
   })
   @ApiBody({
     schema: {
-      type: 'array',
-      items: { type: 'number', example: 1 },
-      example: [1, 2, 3],
+      type: 'object',
+      properties: {
+        lessonIds: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'uuid',
+          },
+          example: [
+            '550e8400-e29b-41d4-a716-446655440000',
+            '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+            '7c9e6679-7425-40de-944b-e07fc1f90ae7',
+          ],
+          description: 'Array of lesson UUIDs to restore',
+        },
+      },
+      required: ['lessonIds'],
+    },
+    examples: {
+      example1: {
+        summary: 'Restore multiple lessons',
+        value: {
+          lessonIds: [
+            '550e8400-e29b-41d4-a716-446655440000',
+            '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+            '7c9e6679-7425-40de-944b-e07fc1f90ae7',
+          ],
+        },
+      },
     },
   })
   @ApiResponse({
     status: 200,
     description: 'Lessons restored successfully.',
-    type: BaseResponseDto<LessonResponseDto>,
+    type: BaseResponseDto<LessonResponseDto[]>,
   })
-  @ApiResponse({ status: 400, description: 'No lesson IDs provided' })
-  @ApiResponse({ status: 404, description: 'Some or all lesson not found' })
+  @ApiResponse({
+    status: 400,
+    description: 'No lesson UUIDs provided or invalid UUID format',
+  })
+  @ApiResponse({ status: 404, description: 'Some or all lessons not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async RestoreLessonMultiple(@Body() ids: number[]) {
-    return await this.lessonService.restoreLessonMultiple(ids);
+  public async RestoreLessonMultiple(@Body('lessonIds') lessonIds: string[]) {
+    return await this.lessonService.restoreLessonMultiple(lessonIds);
   }
 
   @Patch('status-multiple')
