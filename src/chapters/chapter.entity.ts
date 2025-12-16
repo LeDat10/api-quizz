@@ -14,8 +14,8 @@ import { Lesson } from 'src/lesson/lesson.entity';
 
 @Entity()
 export class Chapter {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({
     type: 'varchar',
@@ -60,6 +60,15 @@ export class Chapter {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  publishedAt?: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  inactivedAt?: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  archivedAt?: Date;
 
   @DeleteDateColumn()
   deletedAt: Date;

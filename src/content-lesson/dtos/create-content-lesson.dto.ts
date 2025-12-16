@@ -8,7 +8,7 @@ export class CreateContentLessonDto {
   @Trim()
   content: string;
 
-  @IsUUID()
+  @IsUUID('4')
   @IsNotEmpty()
   lessonId: string;
 }

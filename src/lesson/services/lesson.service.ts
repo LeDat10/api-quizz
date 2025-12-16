@@ -1,13 +1,9 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { DataSource, In, IsNull, Not, Repository } from 'typeorm';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { DataSource, IsNull, Not, Repository } from 'typeorm';
 import { Lesson } from '../lesson.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessonResponseDto } from '../dtos/lesson-response.dto';
-import { ChaptersService } from 'src/chapters/chapters.service';
+import { ChaptersService } from 'src/chapters/services/chapters.service';
 import { generateMessage } from 'src/common/utils/generateMessage.util';
 import { ResponseFactory } from 'src/common/response/factories/response.factory';
 import { PaginationProvider } from 'src/common/pagination/pagination.provider';
@@ -309,11 +305,6 @@ export class LessonService {
         .execute();
 
       await queryRunner.commitTransaction();
-
-      const deletedLesson =
-        await this.lessonCustomRepository.findSoftDeletedById(
-          existingLesson.id,
-        );
       this.logger.success(ctx, ACTIONS.DELETED);
       return ResponseFactory.success(
         generateMessage(ACTIONS.DELETED, this._entity, id),
@@ -459,7 +450,7 @@ export class LessonService {
   public async changeLessonPositionMultiple(
     changLessonPositionDtos: ChangeLessonPositionDto[],
   ) {
-    return await this.lessonBulkService.updatePositionMany(
+    return await this.lessonBulkService.updateLessonPositionMany(
       changLessonPositionDtos,
     );
   }

@@ -23,6 +23,7 @@ export class ContentLesson {
 
   @OneToOne(() => Lesson, (lesson) => lesson.contentLesson, {
     onDelete: 'CASCADE',
+    nullable: false,
   })
   @JoinColumn()
   lesson: Lesson;

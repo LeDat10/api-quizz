@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ChapterStatus } from '../enums/chapter.enum';
 import { Chapter } from '../chapter.entity';
-import { LessonResponseDto } from 'src/lesson/dtos/lesson-response.dto';
 
 export class ChapterResponseDto {
   constructor(entity: Chapter) {
@@ -12,9 +11,6 @@ export class ChapterResponseDto {
     this.position = entity.position;
     this.slug = entity.slug;
     this.courseId = entity.course.id;
-    this.lessons = entity.lessons
-      ? LessonResponseDto.fromEntities(entity.lessons)
-      : null;
     this.createdAt = entity.createdAt;
     this.updatedAt = entity.updatedAt;
     this.deletedAt = entity.deletedAt;
@@ -23,7 +19,7 @@ export class ChapterResponseDto {
     example: 1,
     description: 'Unique identifier of the chapter',
   })
-  id: number;
+  id: string;
 
   @ApiProperty({
     example: 'Introduction to Node.js',
@@ -58,9 +54,6 @@ export class ChapterResponseDto {
 
   @ApiProperty()
   courseId: number;
-
-  @ApiProperty()
-  lessons: LessonResponseDto[] | null;
 
   @ApiProperty()
   createdAt: Date;

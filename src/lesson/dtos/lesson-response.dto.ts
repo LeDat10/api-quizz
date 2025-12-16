@@ -71,7 +71,7 @@ export class LessonResponseDto {
     example: 5,
     description: 'Identifier of the chapter that this lesson belongs to',
   })
-  chapterId: number;
+  chapterId: string;
 
   @ApiProperty()
   data: ContentLessonResponseDto | null;

@@ -376,11 +376,11 @@ export class LessonBulkService {
     }
   }
 
-  public async updatePositionMany(
+  public async updateLessonPositionMany(
     changLessonPositionDtos: ChangeLessonPositionDto[],
   ) {
     const ctx = {
-      method: 'updatePositionMany',
+      method: 'updateLessonPositionMany',
       entity: this._entity,
     };
     this.logger.start(ctx);

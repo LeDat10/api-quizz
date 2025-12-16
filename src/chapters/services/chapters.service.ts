@@ -4,26 +4,27 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { In, IsNull, Not, Repository } from 'typeorm';
-import { Chapter } from './chapter.entity';
+import { Chapter } from '../chapter.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ChapterResponseDto } from './dtos/chapter-response.dto';
-import { CreateChapterDto } from './dtos/creater-chapter.dto';
+import { ChapterResponseDto } from '../dtos/chapter-response.dto';
+import { CreateChapterDto } from '../dtos/creater-chapter.dto';
 import { CoursesService } from 'src/courses/courses.service';
 import {
   generateRadomString,
   generateSlug,
 } from 'src/common/utils/course.util';
-import { UpdateChapterDto } from './dtos/update-chapter.dto';
+import { UpdateChapterDto } from '../dtos/update-chapter.dto';
 import { PaginationProvider } from 'src/common/pagination/pagination.provider';
 import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';
 import { ResponseFactory } from 'src/common/response/factories/response.factory';
 import { generateMessage } from 'src/common/utils/generateMessage.util';
 import { LoggerHelper } from 'src/common/helpers/logger/logger.helper';
 import { ErrorHandlerHelper } from 'src/common/helpers/error/handle-error.helper';
-import { ChangeChapterStatusDto } from './dtos/change-chapter-status.dto';
-import { ChangeChapterPositionDto } from './dtos/change-chapter-position.dto';
-import { ChapterStatus } from './enums/chapter.enum';
+import { ChangeChapterStatusDto } from '../dtos/change-chapter-status.dto';
+import { ChangeChapterPositionDto } from '../dtos/change-chapter-position.dto';
+import { ChapterStatus } from '../enums/chapter.enum';
 import { LessonResponseDto } from 'src/lesson/dtos/lesson-response.dto';
+import { ChapterBulkService } from './chapter-bulk.service';
 
 @Injectable()
 export class ChaptersService {
@@ -35,6 +36,7 @@ export class ChaptersService {
     private readonly chapterRepository: Repository<Chapter>,
     private readonly coursesService: CoursesService,
     private readonly paginationProvider: PaginationProvider,
+    private readonly chapterBulkSerice: ChapterBulkService,
   ) {}
 
   private transform = (chapter: Chapter) => ({
@@ -53,8 +55,8 @@ export class ChaptersService {
     deletedAt: chapter.deletedAt,
   });
 
-  public async findChapterById(id: number) {
-    const ctx = { method: 'findChapterById', entity: this._entity, id };
+  public async findChapterById(id: string) {
+    const ctx = { method: 'findChapterById', entity: this._entity };
     this.logger.start(ctx);
 
     try {
@@ -113,8 +115,8 @@ export class ChaptersService {
     }
   }
 
-  public async getChapterDetail(id: number) {
-    const ctx = { method: 'getChapterDetail', entity: this._entity, id };
+  public async getChapterDetail(id: string) {
+    const ctx = { method: 'getChapterDetail', entity: this._entity };
     this.logger.start(ctx);
 
     try {
@@ -205,8 +207,8 @@ export class ChaptersService {
     }
   }
 
-  public async updateChapter(id: number, updateChapterDto: UpdateChapterDto) {
-    const ctx = { method: 'updateChapter', entity: this._entity, id };
+  public async updateChapter(id: string, updateChapterDto: UpdateChapterDto) {
+    const ctx = { method: 'updateChapter', entity: this._entity };
     this.logger.start(ctx);
 
     try {
@@ -299,8 +301,8 @@ export class ChaptersService {
     }
   }
 
-  public async softDeleteChapter(id: number) {
-    const ctx = { method: 'softDeleteChapter', entity: this._entity, id };
+  public async softDeleteChapter(id: string) {
+    const ctx = { method: 'softDeleteChapter', entity: this._entity };
     this.logger.start(ctx);
 
     try {
@@ -349,8 +351,8 @@ export class ChaptersService {
     }
   }
 
-  public async hardDeleteChapter(id: number) {
-    const ctx = { method: 'hardDeleteChapter', entity: this._entity, id };
+  public async hardDeleteChapter(id: string) {
+    const ctx = { method: 'hardDeleteChapter', entity: this._entity };
     this.logger.start(ctx);
 
     try {
@@ -391,8 +393,8 @@ export class ChaptersService {
     }
   }
 
-  public async restoreChapter(id: number) {
-    const ctx = { method: 'restoreChapter', entity: this._entity, id };
+  public async restoreChapter(id: string) {
+    const ctx = { method: 'restoreChapter', entity: this._entity };
     this.logger.start(ctx);
 
     try {
@@ -525,61 +527,12 @@ export class ChaptersService {
   public async changeChapterPositionMultiple(
     changeChapterPositionDtos: ChangeChapterPositionDto[],
   ) {
-    const ctx = {
-      method: 'changeChapterPositionMultiple',
-      entity: this._entity,
-    };
-    this.logger.start(ctx);
-    try {
-      if (!changeChapterPositionDtos.length) {
-        const reason = 'No chapters provided';
-        this.logger.warn(ctx, 'failed', reason);
-        throw new BadRequestException(
-          generateMessage('updated', this._entity, undefined, reason),
-        );
-      }
-
-      const ids = changeChapterPositionDtos.map((d) => d.id);
-      this.logger.debug(
-        ctx,
-        'start',
-        `Updating positions for chapters with IDs: ${ids.join(', ')}`,
-      );
-      const chapters = await this.chapterRepository.find({
-        where: { id: In(ids) },
-        relations: ['course'],
-      });
-
-      if (!chapters.length) {
-        const reason = `No chapters found with IDs: ${ids.join(', ')}`;
-        this.logger.warn(ctx, 'failed', reason);
-        throw new NotFoundException(reason);
-      }
-
-      for (const chapter of chapters) {
-        const dto = changeChapterPositionDtos.find((d) => d.id === chapter.id);
-
-        if (dto) {
-          chapter.position = dto.position;
-        }
-      }
-
-      await this.chapterRepository.save(chapters);
-      const records = await this.chapterRepository.find({
-        where: { id: In(ids) },
-        relations: ['course'],
-      });
-      this.logger.success(ctx, 'updated');
-      return ResponseFactory.success<ChapterResponseDto[]>(
-        generateMessage('updated', this._entity),
-        ChapterResponseDto.fromEntities(records),
-      );
-    } catch (error) {
-      return this.errorHandler.handle(ctx, error, this._entity);
-    }
+    return await this.chapterBulkSerice.updateChapterPositionMany(
+      changeChapterPositionDtos,
+    );
   }
 
-  public async changeChapterStatus(id: number, status: ChapterStatus) {
+  public async changeChapterStatus(id: string, status: ChapterStatus) {
     const ctx = { method: 'changeChapterStatus', entity: this._entity };
     this.logger.start(ctx);
 

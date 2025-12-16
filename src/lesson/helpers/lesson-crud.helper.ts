@@ -4,7 +4,7 @@ import {
 } from 'src/common/utils/course.util';
 import { LessonCustomRepository } from '../repositories/lesson.repository';
 import { BaseCreateLessonDto } from '../dtos/base-create-lesson.dto';
-import { ChaptersService } from 'src/chapters/chapters.service';
+import { ChaptersService } from 'src/chapters/services/chapters.service';
 import { Lesson } from '../lesson.entity';
 
 export class LessonCrudHelper {
@@ -35,7 +35,7 @@ export class LessonCrudHelper {
 
   static async updateChapterIfProvided(
     lesson: Lesson,
-    chapterId: number | undefined,
+    chapterId: string | undefined,
     chapterService: ChaptersService,
   ): Promise<void> {
     if (chapterId) {

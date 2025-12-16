@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { LessonStatus, LessonType } from '../enums/lesson.enum';
 
@@ -34,7 +34,7 @@ export class BaseUpdateLessonDto {
     description:
       'Updated chapter ID if the lesson needs to be moved to another chapter',
   })
-  @IsInt()
+  @IsUUID('4')
   @IsOptional()
-  chapterId?: number;
+  chapterId?: string;
 }

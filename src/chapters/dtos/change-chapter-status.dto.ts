@@ -4,18 +4,19 @@ import {
   IsEnum,
   IsInt,
   IsNotEmpty,
+  IsUUID,
 } from 'class-validator';
 import { ChapterStatus } from '../enums/chapter.enum';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ChangeChapterStatusDto {
   @IsArray()
-  @IsInt({ each: true })
+  @IsUUID('4', { each: true })
   @ArrayNotEmpty()
   @ApiProperty({
-    type: [Number],
+    type: [String],
   })
-  ids: number[];
+  ids: string[];
 
   @IsEnum(ChapterStatus)
   @IsNotEmpty()

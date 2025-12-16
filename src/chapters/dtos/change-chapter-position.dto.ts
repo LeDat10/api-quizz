@@ -1,11 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsNumber } from 'class-validator';
+import { IsInt, IsNotEmpty, IsNumber, IsUUID } from 'class-validator';
 
 export class ChangeChapterPositionDto {
-  @IsNumber()
+  @IsUUID('4')
   @IsNotEmpty()
   @ApiProperty()
-  id: number;
+  id: string;
 
   @IsNotEmpty()
   @IsInt()

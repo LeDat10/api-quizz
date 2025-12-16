@@ -4,6 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { LessonStatus, LessonType } from '../enums/lesson.enum';
@@ -47,7 +48,7 @@ export class BaseCreateLessonDto {
     example: 5,
     description: 'Identifier of the chapter to which this lesson belongs',
   })
-  @IsInt()
+  @IsUUID('4')
   @IsNotEmpty()
-  chapterId: number;
+  chapterId: string;
 }

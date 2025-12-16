@@ -5,11 +5,12 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
 } from '@nestjs/common';
-import { ChaptersService } from './chapters.service';
+import { ChaptersService } from './services/chapters.service';
 import { CreateChapterDto } from './dtos/creater-chapter.dto';
 import { UpdateChapterDto } from './dtos/update-chapter.dto';
 import { ChapterResponseDto } from './dtos/chapter-response.dto';
@@ -197,7 +198,7 @@ export class ChaptersController {
     status: 500,
     description: 'Internal server error',
   })
-  public async GetChapterDetail(@Param('id', ParseIntPipe) id: number) {
+  public async GetChapterDetail(@Param('id', ParseUUIDPipe) id: string) {
     return this.chaptersService.getChapterDetail(id);
   }
 
@@ -220,7 +221,7 @@ export class ChaptersController {
   @ApiResponse({ status: 404, description: 'Chapter not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   public async UpdateChapter(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateChapterDto: UpdateChapterDto,
   ) {
     return this.chaptersService.updateChapter(id, updateChapterDto);
@@ -270,7 +271,7 @@ export class ChaptersController {
     description: 'Internal server error.',
   })
   public async ChangeChapterStatus(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body('status') status: ChapterStatus,
   ) {
     await this.chaptersService.changeChapterStatus(id, status);
@@ -292,7 +293,7 @@ export class ChaptersController {
     description: 'Chapter not found or already active',
   })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async RestoreChapter(@Param('id', ParseIntPipe) id: number) {
+  public async RestoreChapter(@Param('id', ParseUUIDPipe) id: string) {
     return this.chaptersService.restoreChapter(id);
   }
 
@@ -310,7 +311,7 @@ export class ChaptersController {
   })
   @ApiResponse({ status: 404, description: 'Chapter not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async SoftDeleteChapter(@Param('id', ParseIntPipe) id: number) {
+  public async SoftDeleteChapter(@Param('id', ParseUUIDPipe) id: string) {
     return this.chaptersService.softDeleteChapter(id);
   }
 
@@ -327,7 +328,7 @@ export class ChaptersController {
   })
   @ApiResponse({ status: 404, description: 'Chapter not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async HardDeleteChapter(@Param('id', ParseIntPipe) id: number) {
+  public async HardDeleteChapter(@Param('id', ParseUUIDPipe) id: string) {
     return this.chaptersService.hardDeleteChapter(id);
   }
 }
