@@ -25,6 +25,9 @@ import { ChangeChapterPositionDto } from '../dtos/change-chapter-position.dto';
 import { ChapterStatus } from '../enums/chapter.enum';
 import { LessonResponseDto } from 'src/lesson/dtos/lesson-response.dto';
 import { ChapterBulkService } from './chapter-bulk.service';
+import { validateId } from 'src/lesson/helpers/lesson-validator.helper';
+import { validateAndSetChapterStatus } from '../helpers/validate-status.helper';
+import { ACTIONS } from 'src/common/common.type';
 
 @Injectable()
 export class ChaptersService {
@@ -490,38 +493,9 @@ export class ChaptersService {
   public async changeChapterStatusMultiple(
     changeChapterStatusDto: ChangeChapterStatusDto,
   ) {
-    const ctx = { method: 'changeChapterStatusMultiple', entity: this._entity };
-    this.logger.start(ctx);
-    try {
-      const { ids, status } = changeChapterStatusDto;
-      const chapters = await this.chapterRepository.find({
-        where: { id: In(ids) },
-        relations: ['course'],
-      });
-
-      if (!chapters.length) {
-        const reason = `No chapters found with IDs: ${ids.join(', ')}`;
-        this.logger.warn(ctx, 'failed', reason);
-        throw new NotFoundException(reason);
-      }
-
-      for (const chapter of chapters) {
-        chapter.status = status;
-      }
-
-      await this.chapterRepository.save(chapters);
-      const records = await this.chapterRepository.find({
-        where: { id: In(ids) },
-        relations: ['course'],
-      });
-      this.logger.success(ctx, 'updated');
-      return ResponseFactory.success<ChapterResponseDto[]>(
-        generateMessage('updated', this._entity),
-        ChapterResponseDto.fromEntities(records),
-      );
-    } catch (error) {
-      return this.errorHandler.handle(ctx, error, this._entity);
-    }
+    return await this.chapterBulkSerice.updateChapterStatusMany(
+      changeChapterStatusDto,
+    );
   }
 
   public async changeChapterPositionMultiple(
@@ -537,15 +511,19 @@ export class ChaptersService {
     this.logger.start(ctx);
 
     try {
-      if (!id) {
-        const reason = 'Missing parameter id';
-        this.logger.warn(ctx, 'failed', reason);
-        throw new BadRequestException(
-          generateMessage('failed', this._entity, id, reason),
-        );
-      }
+      validateId(id, ctx, this.logger);
 
       const chapter = await this.findChapterById(id);
+      const { canUpdate, reason } = validateAndSetChapterStatus(
+        chapter,
+        status,
+      );
+
+      if (!canUpdate) {
+        this.logger.warn(ctx, ACTIONS.UPDATED, `Validation error: ${reason}`);
+        throw new BadRequestException(reason);
+      }
+
       chapter.status = status;
       const record = await this.chapterRepository.save(chapter);
       this.logger.success(ctx, 'updated');
