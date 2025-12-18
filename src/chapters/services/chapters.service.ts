@@ -34,6 +34,7 @@ import { validateAndSetChapterStatus } from '../helpers/validate-status.helper';
 import { Action } from 'src/common/status/enums/action.enum';
 import { Lesson } from 'src/lesson/lesson.entity';
 import { ContentLesson } from 'src/content-lesson/content-lesson.entity';
+import { ActionValidationResult } from 'src/common/status/interfaces/validation-result.interface';
 
 @Injectable()
 export class ChaptersService {
@@ -303,14 +304,21 @@ export class ChaptersService {
           throw new BadRequestException(reason);
         }
 
-        // if (chapter.lessons && chapter.lessons.length > 0) {
-        //   const childStatuses = chapter.lessons.map((l) => l.lessonStatus);
-        //   const { allowed, reason } = validateParentStatusChangeWithChildren(
-        //     chapter.status,
-        //     updateChapterDto.status,
-        //     childStatuses,
-        //   );
-        // }
+        if (chapter.lessons && chapter.lessons.length > 0) {
+          const childStatuses = chapter.lessons.map((l) => l.lessonStatus);
+          const validateParentStatus: ActionValidationResult =
+            validateParentStatusChangeWithChildren(
+              chapter.status,
+              updateChapterDto.status,
+              childStatuses,
+            );
+
+          if (!validateParentStatus.allowed) {
+            this.logger.warn(ctx, ACTIONS.UPDATED, validateParentStatus.reason);
+            throw new BadRequestException(validateParentStatus.reason);
+          }
+        }
+
         chapter.status = updateChapterDto.status;
       }
 
