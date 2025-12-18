@@ -22,6 +22,7 @@ import { LessonStrategyFactory } from '../factories/lesson-strategy.factory';
 import { LessonCustomRepository } from '../repositories/lesson.repository';
 import { LessonBulkService } from './lesson-bulk.service';
 import { LessonCrudHelper } from '../helpers/lesson-crud.helper';
+import { Status } from 'src/common/status/enums/status.enum';
 
 const TABLE_RELATIONS = {
   CONTENT: 'contentLesson',
@@ -455,7 +456,7 @@ export class LessonService {
     );
   }
 
-  public async changeLessonStatus(id: string, status: LessonStatus) {
+  public async changeLessonStatus(id: string, status: Status) {
     const ctx = { method: 'changeLessonStatus', entity: this._entity };
     this.logger.start(ctx);
 

@@ -7,7 +7,8 @@ import {
   IsUUID,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { LessonStatus, LessonType } from '../enums/lesson.enum';
+import { LessonType } from '../enums/lesson.enum';
+import { Status } from 'src/common/status/enums/status.enum';
 
 export class BaseCreateLessonDto {
   @ApiProperty({
@@ -27,14 +28,14 @@ export class BaseCreateLessonDto {
   lessonType: LessonType;
 
   @ApiPropertyOptional({
-    enum: LessonStatus,
-    example: LessonStatus.DRAFT,
+    enum: Status,
+    example: Status.DRAFT,
     description:
       'Status of the lesson (draft, published, inactive, or archived)',
   })
-  @IsEnum(LessonStatus)
+  @IsEnum(Status)
   @IsOptional()
-  lessonStatus?: LessonStatus;
+  lessonStatus?: Status;
 
   @ApiPropertyOptional({
     example: 2,

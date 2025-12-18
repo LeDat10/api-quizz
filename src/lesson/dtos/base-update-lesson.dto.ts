@@ -1,6 +1,6 @@
 import { IsEnum, IsInt, IsOptional, IsString, IsUUID } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { LessonStatus, LessonType } from '../enums/lesson.enum';
+import { Status } from 'src/common/status/enums/status.enum';
 
 export class BaseUpdateLessonDto {
   @ApiPropertyOptional({
@@ -12,14 +12,14 @@ export class BaseUpdateLessonDto {
   title?: string;
 
   @ApiPropertyOptional({
-    enum: LessonStatus,
-    example: LessonStatus.PUBLISHED,
+    enum: Status,
+    example: Status.DRAFT,
     description:
       'Updated lesson status (draft, published, inactive, or archived)',
   })
-  @IsEnum(LessonStatus)
+  @IsEnum(Status)
   @IsOptional()
-  lessonStatus?: LessonStatus;
+  lessonStatus?: Status;
 
   @ApiPropertyOptional({
     example: 3,

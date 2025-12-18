@@ -9,10 +9,11 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { LessonStatus, LessonType } from './enums/lesson.enum';
+import { LessonType } from './enums/lesson.enum';
 import { Chapter } from 'src/chapters/chapter.entity';
 import { Resource } from 'src/resource/entities/resource.entity';
 import { ContentLesson } from 'src/content-lesson/content-lesson.entity';
+import { Status } from 'src/common/status/enums/status.enum';
 
 @Entity()
 export class Lesson {
@@ -34,10 +35,10 @@ export class Lesson {
 
   @Column({
     type: 'enum',
-    enum: LessonStatus,
-    default: LessonStatus.DRAFT,
+    enum: Status,
+    default: Status.DRAFT,
   })
-  lessonStatus: LessonStatus;
+  lessonStatus: Status;
 
   @Column({
     nullable: false,

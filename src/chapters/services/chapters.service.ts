@@ -9,10 +9,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ChapterResponseDto } from '../dtos/chapter-response.dto';
 import { CreateChapterDto } from '../dtos/creater-chapter.dto';
 import { CoursesService } from 'src/courses/courses.service';
-import {
-  generateRadomString,
-  generateSlug,
-} from 'src/common/utils/course.util';
 import { UpdateChapterDto } from '../dtos/update-chapter.dto';
 import { PaginationProvider } from 'src/common/pagination/pagination.provider';
 import { PaginationQueryDto } from 'src/common/pagination/dtos/pagination-query.dto';
@@ -22,15 +18,12 @@ import { LoggerHelper } from 'src/common/helpers/logger/logger.helper';
 import { ErrorHandlerHelper } from 'src/common/helpers/error/handle-error.helper';
 import { ChangeChapterStatusDto } from '../dtos/change-chapter-status.dto';
 import { ChangeChapterPositionDto } from '../dtos/change-chapter-position.dto';
-import { ChapterStatus } from '../enums/chapter.enum';
 import { LessonResponseDto } from 'src/lesson/dtos/lesson-response.dto';
 import { ChapterBulkService } from './chapter-bulk.service';
 import { validateId } from 'src/lesson/helpers/lesson-validator.helper';
 import { ACTIONS } from 'src/common/common.type';
-import { ChapterCrudHelper } from '../helpers/chapter-crud.helper';
 import { ChapterCustomRepository } from '../repositories/chapter.repository';
 import { Course } from 'src/courses/course.entity';
-import { CourseStatus } from 'src/courses/enums/type-course.enum';
 import {
   validateParentStatusChangeWithChildren,
   validateStatusHelper,
@@ -39,7 +32,6 @@ import {
 import { Status } from 'src/common/status/enums/status.enum';
 import { validateAndSetChapterStatus } from '../helpers/validate-status.helper';
 import { Action } from 'src/common/status/enums/action.enum';
-import { ChapterTransactionHelper } from '../helpers/chapter-transaction.helper';
 import { Lesson } from 'src/lesson/lesson.entity';
 import { ContentLesson } from 'src/content-lesson/content-lesson.entity';
 

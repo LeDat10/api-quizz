@@ -28,6 +28,7 @@ import { ChangeLessonPositionDto } from './dtos/change-lesson-position.dto';
 import { LessonStatus } from './enums/lesson.enum';
 import { CreateLessonWithContentDto } from './dtos/create-lesson-with-content.dto';
 import { UdpateLessonWithContentDto } from './dtos/update-lesson-with-content.dto';
+import { Status } from 'src/common/status/enums/status.enum';
 
 @ApiTags('Lessons')
 @Controller('lesson')
@@ -439,7 +440,7 @@ export class LessonController {
   })
   public async ChangeLessonStatus(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body('status') status: LessonStatus,
+    @Body('status') status: Status,
   ) {
     return await this.lessonService.changeLessonStatus(id, status);
   }

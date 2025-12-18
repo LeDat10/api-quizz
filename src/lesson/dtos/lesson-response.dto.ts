@@ -1,7 +1,8 @@
-import { LessonStatus, LessonType } from '../enums/lesson.enum';
+import { LessonType } from '../enums/lesson.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Lesson } from '../lesson.entity';
 import { ContentLessonResponseDto } from 'src/content-lesson/dtos/content-lesson-response.dto';
+import { Status } from 'src/common/status/enums/status.enum';
 
 export class LessonResponseDto {
   constructor(entity: Lesson) {
@@ -48,12 +49,12 @@ export class LessonResponseDto {
   lessonType: LessonType;
 
   @ApiProperty({
-    enum: LessonStatus,
-    example: LessonStatus.PUBLISHED,
+    enum: Status,
+    example: Status.DRAFT,
     description:
       'Status of the lesson: draft, published, inactive, or archived',
   })
-  lessonStatus: LessonStatus;
+  lessonStatus: Status;
 
   @ApiProperty({
     example: 1,

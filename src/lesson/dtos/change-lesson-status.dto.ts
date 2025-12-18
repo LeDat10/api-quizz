@@ -2,12 +2,11 @@ import {
   ArrayNotEmpty,
   IsArray,
   IsEnum,
-  IsInt,
   IsNotEmpty,
   IsUUID,
 } from 'class-validator';
-import { LessonStatus } from '../enums/lesson.enum';
 import { ApiProperty } from '@nestjs/swagger';
+import { Status } from 'src/common/status/enums/status.enum';
 
 export class ChangeLessonStatusDto {
   @IsArray()
@@ -23,8 +22,8 @@ export class ChangeLessonStatusDto {
   })
   ids: string[];
 
-  @IsEnum(LessonStatus)
+  @IsEnum(Status)
   @IsNotEmpty()
   @ApiProperty()
-  status: LessonStatus;
+  status: Status;
 }
