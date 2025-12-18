@@ -69,3 +69,20 @@ export const validateId = (id: string, ctx: any, logger: LoggerHelper) => {
     throw new BadRequestException(reason);
   }
 };
+
+// export const validateSatusHelper = (
+//   parentStatus: Status,
+//   status: Status,
+//   action: Action,
+//   options?: {
+//     entityName?: string;
+//   },
+// ): ActionValidationResult => {
+//   switch (action) {
+//     case Action.CREATE:
+//       break;
+
+//     default:
+//       break;
+//   }
+// };

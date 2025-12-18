@@ -27,6 +27,7 @@ import { BaseResponseDto } from 'src/common/response/dtos/base-response.dto';
 import { ChangeCourseStatusDto } from './dtos/change-course-status.dto';
 import { ChangeCoursePositionDto } from './dtos/change-course-position.dto';
 import { CourseStatus } from './enums/type-course.enum';
+import { Status } from 'src/common/status/enums/status.enum';
 
 @ApiTags('Courses')
 @Controller('courses')
@@ -270,7 +271,7 @@ export class CoursesController {
   })
   public async ChangeCourseStatus(
     @Param('id', ParseIntPipe) id: number,
-    @Body('status') status: CourseStatus,
+    @Body('status') status: Status,
   ) {
     return await this.coursesService.changeCourseStatus(id, status);
   }

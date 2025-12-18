@@ -1,6 +1,6 @@
 import { CourseStatus } from 'src/courses/enums/type-course.enum';
 import { Chapter } from '../chapter.entity';
-import { ChapterStatus } from '../enums/chapter.enum';
+import { Status } from 'src/common/status/enums/status.enum';
 
 type TransitionResult = {
   canUpdate: boolean;
@@ -9,12 +9,9 @@ type TransitionResult = {
 
 export function validateAndSetChapterStatus(
   chapter: Chapter,
-  targetStatus: ChapterStatus,
+  targetStatus: Status,
 ): TransitionResult {
-  if (
-    targetStatus === ChapterStatus.DRAFT &&
-    chapter.status !== ChapterStatus.DRAFT
-  ) {
+  if (targetStatus === Status.DRAFT && chapter.status !== Status.DRAFT) {
     return {
       canUpdate: false,
       reason: `Cannot revert chapter "${chapter.title}" to DRAFT because it has been published`,
@@ -26,17 +23,14 @@ export function validateAndSetChapterStatus(
   }
 
   // DRAFT -> PUBLISHED
-  if (
-    chapter.status === ChapterStatus.DRAFT &&
-    targetStatus === ChapterStatus.PUBLISHED
-  ) {
+  if (chapter.status === Status.DRAFT && targetStatus === Status.PUBLISHED) {
     if (!chapter.lessons?.length) {
       return {
         canUpdate: false,
         reason: `Chapter "${chapter.title}" cannot be published: no lessons found`,
       };
     }
-    if (chapter.course.status !== CourseStatus.PUBLISHED) {
+    if (chapter.course.status !== Status.PUBLISHED) {
       return {
         canUpdate: false,
         reason: `Chapter "${chapter.title}" cannot be published: course is not published`,
@@ -45,10 +39,7 @@ export function validateAndSetChapterStatus(
   }
 
   // ARCHIVED -> PUBLISHED
-  if (
-    chapter.status === ChapterStatus.ARCHIVED &&
-    targetStatus === ChapterStatus.PUBLISHED
-  ) {
+  if (chapter.status === Status.ARCHIVED && targetStatus === Status.PUBLISHED) {
     if (!chapter.lessons?.length) {
       return {
         canUpdate: false,
@@ -58,13 +49,13 @@ export function validateAndSetChapterStatus(
   }
 
   switch (targetStatus) {
-    case ChapterStatus.PUBLISHED:
+    case Status.PUBLISHED:
       if (!chapter.publishedAt) chapter.publishedAt = new Date();
       break;
-    case ChapterStatus.INACTIVE:
+    case Status.INACTIVE:
       chapter.inactivedAt = new Date();
       break;
-    case ChapterStatus.ARCHIVED:
+    case Status.ARCHIVED:
       chapter.archivedAt = new Date();
       break;
     default:

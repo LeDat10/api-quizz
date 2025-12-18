@@ -11,6 +11,7 @@ import {
 import { ChapterStatus } from './enums/chapter.enum';
 import { Course } from 'src/courses/course.entity';
 import { Lesson } from 'src/lesson/lesson.entity';
+import { Status } from 'src/common/status/enums/status.enum';
 
 @Entity()
 export class Chapter {
@@ -31,10 +32,10 @@ export class Chapter {
 
   @Column({
     type: 'enum',
-    enum: ChapterStatus,
-    default: ChapterStatus.DRAFT,
+    enum: Status,
+    default: Status.DRAFT,
   })
-  status: ChapterStatus;
+  status: Status;
 
   @Column({
     type: 'integer',
@@ -52,7 +53,7 @@ export class Chapter {
   @ManyToOne(() => Course, (courses) => courses.chapters)
   course: Course;
 
-  @OneToMany(() => Lesson, (lessons) => lessons.chapter)
+  @OneToMany(() => Lesson, (lessons) => lessons.chapter, { nullable: true })
   lessons: Lesson[];
 
   @CreateDateColumn()

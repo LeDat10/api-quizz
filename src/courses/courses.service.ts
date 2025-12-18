@@ -25,6 +25,7 @@ import { ChangeCourseStatusDto } from './dtos/change-course-status.dto';
 import { ChangeCoursePositionDto } from './dtos/change-course-position.dto';
 import { CourseStatus } from './enums/type-course.enum';
 import { CategoryResponseDto } from 'src/categories/dtos/category-response.dto';
+import { Status } from 'src/common/status/enums/status.enum';
 
 @Injectable()
 export class CoursesService {
@@ -603,7 +604,7 @@ export class CoursesService {
     }
   }
 
-  public async changeCourseStatus(id: number, status: CourseStatus) {
+  public async changeCourseStatus(id: number, status: Status) {
     const ctx = { method: 'changeCourseStatus', entity: this._entity };
     this.logger.start(ctx);
 

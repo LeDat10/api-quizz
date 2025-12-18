@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ChapterStatus } from '../enums/chapter.enum';
 import { Chapter } from '../chapter.entity';
+import { Status } from 'src/common/status/enums/status.enum';
 
 export class ChapterResponseDto {
   constructor(entity: Chapter) {
@@ -34,11 +35,11 @@ export class ChapterResponseDto {
   description?: string;
 
   @ApiProperty({
-    enum: ChapterStatus,
-    example: ChapterStatus.DRAFT,
+    enum: Status,
+    example: Status.DRAFT,
     description: 'Current status of the chapter',
   })
-  status: ChapterStatus;
+  status: Status;
 
   @ApiProperty({
     example: 1,

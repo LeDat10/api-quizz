@@ -7,6 +7,7 @@ import {
 } from 'class-validator';
 import { CourseStatus, TypeCourse } from '../enums/type-course.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Status } from 'src/common/status/enums/status.enum';
 
 export class CreateCourseDto {
   @IsString()
@@ -30,7 +31,7 @@ export class CreateCourseDto {
   @IsEnum(CourseStatus)
   @IsOptional()
   @ApiPropertyOptional()
-  status?: CourseStatus;
+  status?: Status;
 
   @IsInt()
   @IsOptional()

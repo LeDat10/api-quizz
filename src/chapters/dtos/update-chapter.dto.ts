@@ -1,6 +1,6 @@
 import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
-import { ChapterStatus } from '../enums/chapter.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Status } from 'src/common/status/enums/status.enum';
 
 export class UpdateChapterDto {
   @IsString()
@@ -13,20 +13,8 @@ export class UpdateChapterDto {
   @ApiPropertyOptional()
   description?: string;
 
-  @IsEnum({
-    enum: ChapterStatus,
-  })
+  @IsEnum(Status)
   @IsOptional()
   @ApiPropertyOptional()
-  status?: ChapterStatus;
-
-  @IsInt()
-  @IsOptional()
-  @ApiPropertyOptional()
-  position?: number;
-
-  @IsOptional()
-  @IsInt()
-  @ApiPropertyOptional()
-  courseId?: number;
+  status?: Status;
 }

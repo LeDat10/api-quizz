@@ -5,10 +5,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Chapter } from './chapter.entity';
 import { CoursesModule } from 'src/courses/courses.module';
 import { PaginationModule } from 'src/common/pagination/pagination.module';
+import { ChapterBulkService } from './services/chapter-bulk.service';
+import { ChapterCustomRepository } from './repositories/chapter.repository';
 
 @Module({
   controllers: [ChaptersController],
-  providers: [ChaptersService],
+  providers: [ChaptersService, ChapterBulkService, ChapterCustomRepository],
   imports: [
     TypeOrmModule.forFeature([Chapter]),
     CoursesModule,

@@ -28,6 +28,7 @@ import { BaseResponseDto } from 'src/common/response/dtos/base-response.dto';
 import { ChangeChapterStatusDto } from './dtos/change-chapter-status.dto';
 import { ChangeChapterPositionDto } from './dtos/change-chapter-position.dto';
 import { ChapterStatus } from './enums/chapter.enum';
+import { Status } from 'src/common/status/enums/status.enum';
 
 @ApiTags('Chapters')
 @Controller('chapters')
@@ -272,7 +273,7 @@ export class ChaptersController {
   })
   public async ChangeChapterStatus(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body('status') status: ChapterStatus,
+    @Body('status') status: Status,
   ) {
     await this.chaptersService.changeChapterStatus(id, status);
   }

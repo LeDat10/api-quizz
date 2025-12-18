@@ -7,6 +7,7 @@ import {
 } from 'class-validator';
 import { CourseStatus } from '../enums/type-course.enum';
 import { ApiProperty } from '@nestjs/swagger';
+import { Status } from 'src/common/status/enums/status.enum';
 
 export class ChangeCourseStatusDto {
   @IsArray()
@@ -20,5 +21,5 @@ export class ChangeCourseStatusDto {
   @IsEnum(CourseStatus)
   @IsNotEmpty()
   @ApiProperty()
-  status: CourseStatus;
+  status: Status;
 }

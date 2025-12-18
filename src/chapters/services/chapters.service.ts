@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { In, IsNull, Not, Repository } from 'typeorm';
+import { DataSource, In, IsNull, Not, Repository } from 'typeorm';
 import { Chapter } from '../chapter.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ChapterResponseDto } from '../dtos/chapter-response.dto';
@@ -26,8 +26,22 @@ import { ChapterStatus } from '../enums/chapter.enum';
 import { LessonResponseDto } from 'src/lesson/dtos/lesson-response.dto';
 import { ChapterBulkService } from './chapter-bulk.service';
 import { validateId } from 'src/lesson/helpers/lesson-validator.helper';
-import { validateAndSetChapterStatus } from '../helpers/validate-status.helper';
 import { ACTIONS } from 'src/common/common.type';
+import { ChapterCrudHelper } from '../helpers/chapter-crud.helper';
+import { ChapterCustomRepository } from '../repositories/chapter.repository';
+import { Course } from 'src/courses/course.entity';
+import { CourseStatus } from 'src/courses/enums/type-course.enum';
+import {
+  validateParentStatusChangeWithChildren,
+  validateStatusHelper,
+  validateStatusTransition,
+} from 'src/common/status';
+import { Status } from 'src/common/status/enums/status.enum';
+import { validateAndSetChapterStatus } from '../helpers/validate-status.helper';
+import { Action } from 'src/common/status/enums/action.enum';
+import { ChapterTransactionHelper } from '../helpers/chapter-transaction.helper';
+import { Lesson } from 'src/lesson/lesson.entity';
+import { ContentLesson } from 'src/content-lesson/content-lesson.entity';
 
 @Injectable()
 export class ChaptersService {
@@ -40,6 +54,8 @@ export class ChaptersService {
     private readonly coursesService: CoursesService,
     private readonly paginationProvider: PaginationProvider,
     private readonly chapterBulkSerice: ChapterBulkService,
+    private readonly chapterCustomRepository: ChapterCustomRepository,
+    private readonly connection: DataSource,
   ) {}
 
   private transform = (chapter: Chapter) => ({
@@ -141,6 +157,10 @@ export class ChaptersService {
     const ctx = { method: 'createChapter', entity: this._entity };
     this.logger.start(ctx);
 
+    const queryRunner = this.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
       this.logger.debug(
         ctx,
@@ -149,64 +169,74 @@ export class ChaptersService {
       );
 
       // Find course
-      const course = await this.coursesService.findCourseById(
-        createChapterDto.courseId,
-      );
-
-      if (!course) {
-        const reason = `Course ID ${createChapterDto.courseId} not found`;
-        this.logger.warn(ctx, 'failed', reason);
-        throw new NotFoundException(
-          generateMessage('failed', this._entity, undefined, reason),
-        );
-      }
-
-      this.logger.debug(ctx, 'start', `Course found: ${course.title}`);
-
-      // Generate slug
-      let slug = generateSlug(createChapterDto.title);
-      const chapterWithSlugExist = await this.chapterRepository.findOneBy({
-        slug,
+      const course = await queryRunner.manager.findOne(Course, {
+        where: { id: createChapterDto.courseId },
+        lock: { mode: 'pessimistic_write' }, // Lock course row
       });
 
-      if (chapterWithSlugExist) {
-        this.logger.warn(
-          ctx,
-          'start',
-          `Slug ${slug} exists, appending random string`,
-        );
-        slug = `${slug}-${generateRadomString()}`;
+      if (!course) {
+        const reason = `Course with ID ${createChapterDto.courseId} not found`;
+        this.logger.warn(ctx, 'failed', reason);
+        throw new NotFoundException(reason);
       }
+
+      this.logger.debug(ctx, 'start', `Found course: "${course.title}"`);
+      const { allowed, reason } = validateStatusHelper(
+        course.status, // parent status
+        null, // child status (null for CREATE)
+        Action.CREATE,
+        {
+          entityName: 'Chapter',
+          parentName: 'Course',
+        },
+      );
+
+      if (!allowed) {
+        this.logger.warn(ctx, ACTIONS.FAILED, reason); // Fix: 'failed' not ACTIONS.CREATED
+        throw new BadRequestException(reason);
+      }
+
+      // Generate slug
+      const slug =
+        await this.chapterCustomRepository.generateUniqueSlugWithQueryRunner(
+          createChapterDto.title,
+          queryRunner,
+        );
+
+      this.logger.debug(ctx, 'start', `Generated slug: "${slug}"`);
 
       // Auto-increment position if not provided
-      if (!createChapterDto.position) {
-        const count = await this.chapterRepository.count();
-        createChapterDto.position = count + 1;
-        this.logger.debug(
-          ctx,
-          'start',
-          `Auto-assigned position: ${createChapterDto.position}`,
+      const position =
+        await this.chapterCustomRepository.getNextPositionWithQueryRunner(
+          createChapterDto.courseId,
+          queryRunner,
         );
-      }
+
+      this.logger.debug(ctx, 'start', `Assigned position: ${position}`);
 
       // Create and save
-      const chapter = this.chapterRepository.create({
+      const chapter = queryRunner.manager.create(Chapter, {
         ...createChapterDto,
         slug,
         course,
+        position,
       });
 
-      const chapterSaved = await this.chapterRepository.save(chapter);
-      const chapterSavedResponse = ChapterResponseDto.fromEntity(chapterSaved);
+      const saved = await queryRunner.manager.save(Chapter, chapter);
+      await queryRunner.commitTransaction();
+      const chapterSavedResponse = ChapterResponseDto.fromEntity(saved);
 
       this.logger.success(ctx, 'created');
 
       return ResponseFactory.success<ChapterResponseDto>(
-        generateMessage('created', this._entity, chapterSaved.id),
+        generateMessage('created', this._entity, saved.id),
         chapterSavedResponse,
       );
     } catch (error) {
+      await queryRunner.rollbackTransaction();
       return this.errorHandler.handle(ctx, error, this._entity);
+    } finally {
+      await queryRunner.release();
     }
   }
 
@@ -215,66 +245,117 @@ export class ChaptersService {
     this.logger.start(ctx);
 
     try {
-      if (!id) {
-        const reason = 'Missing parameter id';
+      validateId(id, ctx, this.logger);
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+
+    const queryRunner = this.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const chapter =
+        await this.chapterCustomRepository.findChapterByIdWithQueryRunner(
+          id,
+          queryRunner,
+        );
+      if (!chapter) {
+        const reason = 'Chapter not found';
         this.logger.warn(ctx, 'failed', reason);
-        throw new BadRequestException(
+        throw new NotFoundException(
           generateMessage('failed', this._entity, id, reason),
         );
       }
+      this.logger.debug(
+        ctx,
+        'start',
+        `Updating chapter: "${chapter.title}" in course: "${chapter.course.title}"`,
+      );
 
-      const chapter = await this.findChapterById(id);
+      const { allowed, reason } = validateStatusHelper(
+        chapter.course.status,
+        chapter.status,
+        Action.UPDATE,
+      );
 
-      // Update course if provided
-      if (updateChapterDto.courseId) {
-        this.logger.debug(
-          ctx,
-          'start',
-          `Looking for course ID: ${updateChapterDto.courseId}`,
+      if (!allowed) {
+        this.logger.warn(ctx, ACTIONS.UPDATED, reason);
+        throw new BadRequestException(reason);
+      }
+
+      const originalCourseId = chapter.course.id;
+      const originalTitle = chapter.title;
+
+      const newPosition =
+        await this.chapterCustomRepository.getNextPositionWithQueryRunner(
+          originalCourseId,
+          queryRunner,
         );
-        const course = await this.coursesService.findCourseById(
-          updateChapterDto.courseId,
+
+      chapter.position = newPosition;
+
+      if (updateChapterDto.status) {
+        const { allowed, reason } = validateStatusTransition(
+          chapter.status,
+          updateChapterDto.status,
+          {
+            parentStatus: chapter.course.status,
+            entityName: 'Chapter',
+            parentName: 'Course',
+          },
         );
 
-        if (course) {
-          chapter.course = course;
-          this.logger.debug(ctx, 'start', `Course found: ${course.title}`);
+        if (!allowed) {
+          this.logger.warn(ctx, ACTIONS.UPDATED, reason);
+          throw new BadRequestException(reason);
         }
+
+        // if (chapter.lessons && chapter.lessons.length > 0) {
+        //   const childStatuses = chapter.lessons.map((l) => l.lessonStatus);
+        //   const { allowed, reason } = validateParentStatusChangeWithChildren(
+        //     chapter.status,
+        //     updateChapterDto.status,
+        //     childStatuses,
+        //   );
+        // }
+        chapter.status = updateChapterDto.status;
       }
 
       // Update slug if title changed
       if (updateChapterDto.title && updateChapterDto.title !== chapter.title) {
-        let slug = generateSlug(updateChapterDto.title);
-        const chapterWithSlugExist = await this.chapterRepository.findOneBy({
-          slug,
-        });
-
-        if (chapterWithSlugExist && chapterWithSlugExist.id !== id) {
-          this.logger.warn(
-            ctx,
-            'start',
-            `Slug ${slug} exists, generating new one`,
+        this.logger.debug(
+          ctx,
+          'start',
+          `Updating title from "${originalTitle}" to "${updateChapterDto.title}"`,
+        );
+        const slug =
+          await this.chapterCustomRepository.generateUniqueSlugWithQueryRunner(
+            originalTitle,
+            queryRunner,
           );
-          slug = `${slug}-${generateRadomString()}`;
-        }
-
+        chapter.title = updateChapterDto.title;
         chapter.slug = slug;
       }
 
-      Object.assign(chapter, updateChapterDto);
-      await this.chapterRepository.save(chapter);
-      const chapterUpdated = await this.findChapterById(id);
-      const chapterUpdatedResponse =
-        ChapterResponseDto.fromEntity(chapterUpdated);
+      if (updateChapterDto.description !== undefined) {
+        chapter.description = updateChapterDto.description;
+      }
+      const saved = await queryRunner.manager.save(Chapter, chapter);
+      await queryRunner.commitTransaction();
 
+      // const chapterUpdated = await this.findChapterById(id);
+      const chapterUpdatedResponse = ChapterResponseDto.fromEntity(saved);
       this.logger.success(ctx, 'updated');
-
       return ResponseFactory.success<ChapterResponseDto>(
         generateMessage('updated', this._entity, id),
         chapterUpdatedResponse,
       );
     } catch (error) {
+      await queryRunner.rollbackTransaction();
       return this.errorHandler.handle(ctx, error, this._entity, id);
+    } finally {
+      await queryRunner.release();
     }
   }
 
@@ -309,48 +390,97 @@ export class ChaptersService {
     this.logger.start(ctx);
 
     try {
-      if (!id) {
-        const reason = 'Missing parameter id';
-        this.logger.warn(ctx, 'failed', reason);
-        throw new BadRequestException(
-          generateMessage('failed', this._entity, id, reason),
-        );
-      }
+      validateId(id, ctx, this.logger);
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity, id);
+    }
 
-      const chapter = await this.chapterRepository.findOne({
-        where: { id },
-        relations: ['course'],
-      });
+    const queryRunner = this.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const chapter =
+        await this.chapterCustomRepository.findChapterByIdWithQueryRunner(
+          id,
+          queryRunner,
+        );
 
       if (!chapter) {
-        const reason = 'Not found';
+        const reason = 'Chapter not found';
         this.logger.warn(ctx, 'failed', reason);
         throw new NotFoundException(
           generateMessage('failed', this._entity, id, reason),
         );
       }
 
+      this.logger.debug(
+        ctx,
+        'start',
+        `Soft deleting chapter: "${chapter.title}" from course: "${chapter.course.title}"`,
+      );
+
+      const validation = validateStatusHelper(
+        chapter.course.status,
+        chapter.status,
+        Action.DELETE,
+        { entityName: 'Chapter', parentName: 'Course' },
+      );
+      if (!validation.allowed) {
+        this.logger.warn(ctx, 'failed', validation.reason);
+        throw new BadRequestException(validation.reason);
+      }
+
       // Check if chapter has lessons
       if (chapter.lessons && chapter.lessons.length > 0) {
-        const reason = `Has ${chapter.lessons.length} existing lessons`;
-        this.logger.warn(ctx, 'failed', reason);
-        throw new BadRequestException(
-          generateMessage('failed', this._entity, id, reason),
+        this.logger.debug(
+          ctx,
+          'start',
+          `Chapter has ${chapter.lessons.length} lessons`,
+        );
+
+        const lessonIds = chapter.lessons.map((l) => l.id);
+        await queryRunner.manager
+          .createQueryBuilder()
+          .softDelete()
+          .from(Lesson)
+          .where('id IN (:...ids)', { ids: lessonIds })
+          .execute();
+        this.logger.debug(
+          ctx,
+          'start',
+          `Cascade soft deleted ${lessonIds.length} lessons`,
         );
       }
 
-      const chapterDeleted = await this.chapterRepository.softRemove(chapter);
-      const chapterDeletedResponse =
-        ChapterResponseDto.fromEntity(chapterDeleted);
+      const result = await queryRunner.manager
+        .createQueryBuilder()
+        .softDelete()
+        .from(Chapter)
+        .where('id = :id', { id })
+        .execute();
 
+      if (result.affected === 0) {
+        throw new NotFoundException('Chapter not found or already deleted');
+      }
+
+      await queryRunner.commitTransaction();
       this.logger.success(ctx, 'deleted');
-
-      return ResponseFactory.success<ChapterResponseDto>(
+      return ResponseFactory.success(
         generateMessage('deleted', this._entity, id),
-        chapterDeletedResponse,
+        {
+          id: chapter.id,
+          title: chapter.title,
+          courseId: chapter.course.id,
+          deletedAt: new Date(),
+          cascadeDeletedLessons: chapter.lessons?.length || 0,
+        },
       );
     } catch (error) {
+      await queryRunner.rollbackTransaction();
       return this.errorHandler.handle(ctx, error, this._entity, id);
+    } finally {
+      await queryRunner.release();
     }
   }
 
@@ -359,19 +489,21 @@ export class ChaptersService {
     this.logger.start(ctx);
 
     try {
-      if (!id) {
-        const reason = 'Missing parameter id';
-        this.logger.warn(ctx, 'failed', reason);
-        throw new BadRequestException(
-          generateMessage('failed', this._entity, id, reason),
-        );
-      }
+      validateId(id, ctx, this.logger);
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity, id);
+    }
 
-      const chapter = await this.chapterRepository.findOne({
-        withDeleted: true,
-        where: { id, deletedAt: Not(IsNull()) },
-        relations: ['course'],
-      });
+    const queryRunner = this.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const chapter =
+        await this.chapterCustomRepository.findSoftDeletedChapterWithQueryRunner(
+          id,
+          queryRunner,
+        );
 
       if (!chapter) {
         const reason = 'Not found or not soft-deleted';
@@ -381,18 +513,81 @@ export class ChaptersService {
         );
       }
 
-      const chapterDeleted = await this.chapterRepository.remove(chapter);
-      const chapterDeletedResponse =
-        ChapterResponseDto.fromEntity(chapterDeleted);
+      this.logger.debug(
+        ctx,
+        'start',
+        `Hard deleting chapter: "${chapter.title}" from course: "${chapter.course.title}"`,
+      );
 
+      if (chapter.course.status === Status.PUBLISHED) {
+        const reason =
+          'Cannot permanently delete chapter from published course';
+        this.logger.warn(ctx, 'failed', reason);
+        throw new BadRequestException(
+          `${reason}. Archive the course first, or use soft delete.`,
+        );
+      }
+
+      const chapterInfo = {
+        id: chapter.id,
+        title: chapter.title,
+        courseId: chapter.course.id,
+        courseTitle: chapter.course.title,
+        position: chapter.position,
+        lessonsCount: chapter.lessons?.length || 0,
+      };
+
+      if (chapter.lessons && chapter.lessons.length > 0) {
+        this.logger.debug(
+          ctx,
+          'start',
+          `Hard deleting ${chapter.lessons.length} lessons`,
+        );
+
+        const lessonIds = chapter.lessons.map((l) => l.id);
+
+        await queryRunner.manager.delete(ContentLesson, {
+          lessonId: In(lessonIds),
+        });
+
+        await queryRunner.manager.delete(Lesson, {
+          id: In(lessonIds),
+        });
+
+        this.logger.debug(
+          ctx,
+          'start',
+          `Cascade deleted ${lessonIds.length} lessons and their content`,
+        );
+      }
+
+      await queryRunner.manager.delete(Chapter, { id });
+
+      // Reorder remaining chapters
+      await this.chapterCustomRepository.reorderChaptersAfterDeletion(
+        chapter.course.id,
+        chapter.position,
+        queryRunner,
+      );
+
+      await queryRunner.commitTransaction();
       this.logger.success(ctx, 'deleted');
-
-      return ResponseFactory.success<ChapterResponseDto>(
+      return ResponseFactory.success(
         generateMessage('deleted', this._entity, id),
-        chapterDeletedResponse,
+        {
+          id: chapterInfo.id,
+          title: chapterInfo.title,
+          courseId: chapterInfo.courseId,
+          deletedAt: new Date(),
+          permanentlyDeleted: true,
+          cascadeDeletedLessons: chapterInfo.lessonsCount,
+        },
       );
     } catch (error) {
+      await queryRunner.rollbackTransaction();
       return this.errorHandler.handle(ctx, error, this._entity, id);
+    } finally {
+      await queryRunner.release();
     }
   }
 
@@ -506,7 +701,7 @@ export class ChaptersService {
     );
   }
 
-  public async changeChapterStatus(id: string, status: ChapterStatus) {
+  public async changeChapterStatus(id: string, status: Status) {
     const ctx = { method: 'changeChapterStatus', entity: this._entity };
     this.logger.start(ctx);
 

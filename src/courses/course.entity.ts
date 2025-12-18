@@ -11,6 +11,7 @@ import {
 import { CourseStatus, TypeCourse } from './enums/type-course.enum';
 import { Category } from '../categories/category.entity';
 import { Chapter } from 'src/chapters/chapter.entity';
+import { Status } from 'src/common/status/enums/status.enum';
 
 @Entity()
 export class Course {
@@ -44,10 +45,10 @@ export class Course {
 
   @Column({
     type: 'enum',
-    default: CourseStatus.DRAFT,
-    enum: CourseStatus,
+    default: Status.DRAFT,
+    enum: Status,
   })
-  status: CourseStatus;
+  status: Status;
 
   @Column({
     nullable: false,

@@ -2,6 +2,7 @@ import { CategoryResponseDto } from 'src/categories/dtos/category-response.dto';
 import { Course } from '../course.entity';
 import { CourseStatus, TypeCourse } from '../enums/type-course.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Status } from 'src/common/status/enums/status.enum';
 
 export class CourseResponseDto {
   constructor(entity: Course) {
@@ -58,7 +59,7 @@ export class CourseResponseDto {
     example: CourseStatus.DRAFT,
     description: 'Status of the course',
   })
-  status: CourseStatus;
+  status: Status;
 
   @ApiProperty({
     example: 1,

@@ -1,9 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Chapter } from '../chapter.entity';
-import { In, IsNull, Not, Repository } from 'typeorm';
+import { In, IsNull, Not, QueryRunner, Repository } from 'typeorm';
+import {
+  generateRadomString,
+  generateSlug,
+} from 'src/common/utils/course.util';
 
-const TABLE_RELATIONS = { COURSE: 'course' } as const;
+enum TABLE_RELATIONS {
+  COURSE = 'course',
+  LESSONS = 'lessons',
+}
+
 @Injectable()
 export class ChapterCustomRepository {
   constructor(
@@ -44,8 +52,10 @@ export class ChapterCustomRepository {
     return !!lesson && (!excludeId || lesson.id !== excludeId);
   }
 
-  async getNextPosition(): Promise<number> {
-    const count = await this.repository.count();
+  async getNextPosition(courseId: number): Promise<number> {
+    const count = await this.repository.count({
+      where: { course: { id: courseId } },
+    });
     return count + 1;
   }
 
@@ -55,5 +65,83 @@ export class ChapterCustomRepository {
       withDeleted: true,
       relations: [TABLE_RELATIONS.COURSE],
     });
+  }
+
+  async findChapterByIdWithQueryRunner(
+    id: string,
+    queryRunner: QueryRunner,
+  ): Promise<Chapter | null> {
+    return queryRunner.manager
+      .createQueryBuilder(Chapter, 'chapter')
+      .leftJoinAndSelect('chapter.course', 'course')
+      .leftJoinAndSelect('chapter.lessons', 'lessons')
+      .where('chapter.id = :id', { id })
+      .setLock('pessimistic_write', undefined, ['chapter'])
+      .getOne();
+  }
+
+  async getNextPositionWithQueryRunner(
+    courseId: number,
+    queryRunner: QueryRunner,
+  ): Promise<number> {
+    const result = await queryRunner.manager
+      .createQueryBuilder(Chapter, 'chapter')
+      .select('MAX(chapter.position)', 'maxPosition')
+      .where('chapter.courseId = :courseId', { courseId })
+      .getRawOne();
+
+    return (result?.maxPosition || 0) + 1;
+  }
+
+  async generateUniqueSlugWithQueryRunner(
+    title: string,
+    queryRunner: QueryRunner,
+  ): Promise<string> {
+    const baseSlug = generateSlug(title);
+    let slug = baseSlug;
+
+    const existing = await queryRunner.manager.findOne(Chapter, {
+      where: { slug },
+      lock: { mode: 'pessimistic_read' },
+    });
+
+    if (existing) {
+      slug = `${baseSlug}-${generateRadomString()}`;
+    }
+
+    return slug;
+  }
+
+  async findSoftDeletedChapterWithQueryRunner(
+    id: string,
+    queryRunner: QueryRunner,
+  ): Promise<Chapter | null> {
+    return queryRunner.manager
+      .createQueryBuilder(Chapter, 'chapter')
+      .leftJoinAndSelect('chapter.course', 'course')
+      .leftJoinAndSelect('chapter.lessons', 'lessons')
+      .where('chapter.id = :id', { id })
+      .andWhere('chapter.deletedAt IS NOT NULL')
+      .withDeleted()
+      .setLock('pessimistic_write', undefined, ['chapter'])
+      .getOne();
+  }
+
+  async reorderChaptersAfterDeletion(
+    courseId: number,
+    deletedPosition: number,
+    queryRunner: QueryRunner,
+  ): Promise<void> {
+    await queryRunner.manager
+      .createQueryBuilder()
+      .update(Chapter)
+      .set({
+        position: () => '"position" - 1',
+      })
+      .where('"courseId" = :courseId', { courseId })
+      .andWhere('"position" > :deletedPosition', {
+        deletedPosition,
+      })
+      .execute();
   }
 }

@@ -19,6 +19,7 @@ import { ChapterStatus } from '../enums/chapter.enum';
 import { TABLE_RELATIONS } from 'src/constants/constants';
 import { CourseStatus } from 'src/courses/enums/type-course.enum';
 import { validateAndSetChapterStatus } from '../helpers/validate-status.helper';
+import { Status } from 'src/common/status/enums/status.enum';
 
 @Injectable()
 export class ChapterBulkService {
@@ -203,7 +204,7 @@ export class ChapterBulkService {
 
       validateUUIDArray(ids, ctx, this.logger);
 
-      if (!Object.values(ChapterStatus).includes(status)) {
+      if (!Object.values(Status).includes(status)) {
         const reason = `Invalid status: ${status}. Valid values: ${Object.values(ChapterStatus).join(', ')}`;
         this.logger.warn(ctx, ACTIONS.FAILED, reason);
         throw new BadRequestException(reason);
