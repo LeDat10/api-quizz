@@ -118,8 +118,8 @@ export class ChaptersController {
   @ApiBody({
     schema: {
       type: 'array',
-      items: { type: 'number', example: 1 },
-      example: [1, 2, 3],
+      items: { type: 'string', example: 1 },
+      example: [],
     },
   })
   @ApiResponse({
@@ -130,7 +130,7 @@ export class ChaptersController {
   @ApiResponse({ status: 400, description: 'No chapter IDs provided' })
   @ApiResponse({ status: 404, description: 'Some or all chapters not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  public async RestoreChapterMultiple(@Body() ids: number[]) {
+  public async RestoreChapterMultiple(@Body() ids: string[]) {
     return this.chaptersService.restoreChapterMultiple(ids);
   }
 

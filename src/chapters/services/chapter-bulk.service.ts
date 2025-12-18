@@ -17,9 +17,12 @@ import { ChangeChapterStatusDto } from '../dtos/change-chapter-status.dto';
 import { validateUUIDArray } from 'src/common/helpers/validators/validator.helper';
 import { ChapterStatus } from '../enums/chapter.enum';
 import { TABLE_RELATIONS } from 'src/constants/constants';
-import { CourseStatus } from 'src/courses/enums/type-course.enum';
 import { validateAndSetChapterStatus } from '../helpers/validate-status.helper';
 import { Status } from 'src/common/status/enums/status.enum';
+import { Action, validateStatusHelper } from 'src/common/status';
+import { LessonType } from 'src/lesson/enums/lesson.enum';
+import { Lesson } from 'src/lesson/lesson.entity';
+import { ContentLesson } from 'src/content-lesson/content-lesson.entity';
 
 @Injectable()
 export class ChapterBulkService {
@@ -320,6 +323,164 @@ export class ChapterBulkService {
             skippedChapters,
             validationErrors:
               validationErrors.length > 0 ? validationErrors : undefined,
+          },
+        },
+      );
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      return this.errorHandler.handle(ctx, error, this._entity);
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async restoreMany(ids: string[]) {
+    const ctx = { method: 'restoreMany', entity: this._entity };
+    this.logger.start(ctx);
+
+    try {
+      validateUUIDArray(ids, ctx, this.logger);
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity);
+    }
+
+    const queryRunner = this.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const uniqueIds = [...new Set(ids)];
+      if (uniqueIds.length !== ids.length) {
+        this.logger.warn(
+          ctx,
+          'start',
+          `Removed ${ids.length - uniqueIds.length} duplicate IDs`,
+        );
+      }
+
+      this.logger.debug(ctx, 'start', `Restoring ${uniqueIds.length} chapters`);
+
+      const chapters =
+        await this.chapterCustomRepository.findAllSoftDeletedWithQueryRunner(
+          uniqueIds,
+          queryRunner,
+        );
+
+      const foundIds = chapters.map((c) => c.id);
+      const notFoundIds = uniqueIds.filter((id) => !foundIds.includes(id));
+
+      if (notFoundIds.length > 0) {
+        this.logger.warn(
+          ctx,
+          'start',
+          `Chapters not found or not deleted: ${notFoundIds.join(', ')}`,
+        );
+      }
+
+      if (chapters.length === 0) {
+        const reason = 'No soft-deleted chapters found with provided IDs';
+        this.logger.warn(ctx, 'failed', reason);
+        throw new NotFoundException(reason);
+      }
+
+      const invalidChapters: Array<{ id: string; reason: string }> = [];
+      const validChapters: Chapter[] = [];
+      const chaptersWithLessons: Map<string, Lesson[]> = new Map();
+
+      for (const chapter of chapters) {
+        const validation = validateStatusHelper(
+          chapter.course.status,
+          chapter.status,
+          Action.RESTORE,
+          { entityName: 'Chapter', parentName: 'Course' },
+        );
+
+        if (!validation.allowed) {
+          invalidChapters.push({
+            id: chapter.id,
+            reason: validation.reason as string,
+          });
+          continue;
+        }
+        validChapters.push(chapter);
+
+        if (chapter.lessons && chapter.lessons.length > 0) {
+          const softDeletedLessons = chapter.lessons.filter(
+            (l) => l.deletedAt !== null,
+          );
+          if (softDeletedLessons.length > 0) {
+            chaptersWithLessons.set(chapter.id, softDeletedLessons);
+          }
+        }
+      }
+
+      if (validChapters.length === 0) {
+        const reason = 'No chapters can be restored';
+        this.logger.warn(ctx, 'failed', reason);
+        throw new BadRequestException(
+          `${reason}. Reasons: ${invalidChapters.map((c) => c.reason).join('; ')}`,
+        );
+      }
+
+      const validIds = validChapters.map((c) => c.id);
+      const restoreResult = await queryRunner.manager
+        .createQueryBuilder()
+        .restore()
+        .from(Chapter)
+        .where('id IN (:...ids)', { ids: validIds })
+        .execute();
+
+      this.logger.debug(
+        ctx,
+        'start',
+        `Restored ${restoreResult.affected} chapters`,
+      );
+
+      const lessonsByType = {
+        [LessonType.CONTENT]: [],
+        [LessonType.QUIZ]: [],
+        [LessonType.ASSIGNMENT]: [],
+      };
+
+      for (const lessons of chaptersWithLessons.values()) {
+        for (const lesson of lessons) {
+          lessonsByType[lesson.lessonType].push(lesson.id);
+        }
+      }
+
+      if (lessonsByType[LessonType.CONTENT].length > 0) {
+        this.logger.debug(
+          ctx,
+          'start',
+          `restoring ${lessonsByType[LessonType.CONTENT].length} content lessons`,
+        );
+
+        await queryRunner.manager
+          .createQueryBuilder()
+          .restore()
+          .from(ContentLesson)
+          .where('lessonId IN (:...ids)', {
+            ids: lessonsByType[LessonType.CONTENT],
+          })
+          .execute();
+      }
+
+      await queryRunner.commitTransaction();
+      this.logger.success(ctx, 'restored');
+
+      return ResponseFactory.success(
+        `Successfully restored ${restoreResult.affected} chapter(s)`,
+        {
+          restoredIds: validIds,
+          restoredAt: new Date(),
+          summary: {
+            requested: ids.length,
+            successful: restoreResult.affected || 0,
+            failed: invalidChapters.length,
+            notFound: notFoundIds.length,
+            // cascadeRestoredLessons: totalLessonsRestored,
+            notFoundIds,
+            invalidChapters,
           },
         },
       );

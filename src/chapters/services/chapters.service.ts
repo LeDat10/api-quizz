@@ -635,54 +635,8 @@ export class ChaptersService {
     }
   }
 
-  public async restoreChapterMultiple(ids: number[]) {
-    const ctx = { method: 'restoreChapterMultiple', entity: this._entity };
-    this.logger.start(ctx);
-
-    try {
-      if (!ids || ids.length === 0) {
-        const reason = 'No chapter IDs provided';
-        this.logger.warn(ctx, 'failed', reason);
-        throw new BadRequestException(
-          generateMessage('failed', this._entity, undefined, reason),
-        );
-      }
-
-      this.logger.debug(ctx, 'start', `Restoring IDs: ${ids.join(', ')}`);
-
-      const result = await this.chapterRepository.restore({ id: In(ids) });
-
-      if (result.affected === 0) {
-        const reason = 'No chapters found to restore';
-        this.logger.warn(ctx, 'failed', reason);
-        throw new NotFoundException(
-          generateMessage('failed', this._entity, undefined, reason),
-        );
-      }
-
-      const chapters = await this.chapterRepository.find({
-        where: { id: In(ids) },
-        relations: ['course'],
-      });
-
-      if (!chapters.length) {
-        const reason = 'Chapters not found after restore';
-        this.logger.warn(ctx, 'failed', reason);
-        throw new NotFoundException(
-          generateMessage('failed', this._entity, undefined, reason),
-        );
-      }
-
-      const chaptersResponse = ChapterResponseDto.fromEntities(chapters);
-      this.logger.success(ctx, 'restored');
-
-      return ResponseFactory.success<ChapterResponseDto[]>(
-        `${chapters.length} chapters restored successfully`,
-        chaptersResponse,
-      );
-    } catch (error) {
-      return this.errorHandler.handle(ctx, error, this._entity);
-    }
+  public async restoreChapterMultiple(ids: string[]) {
+    return await this.chapterBulkSerice.restoreMany(ids);
   }
 
   public async changeChapterStatusMultiple(

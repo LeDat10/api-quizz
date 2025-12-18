@@ -8,7 +8,6 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { ChapterStatus } from './enums/chapter.enum';
 import { Course } from 'src/courses/course.entity';
 import { Lesson } from 'src/lesson/lesson.entity';
 import { Status } from 'src/common/status/enums/status.enum';

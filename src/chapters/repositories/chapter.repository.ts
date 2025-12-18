@@ -144,4 +144,19 @@ export class ChapterCustomRepository {
       })
       .execute();
   }
+
+  async findAllSoftDeletedWithQueryRunner(
+    ids: string[],
+    queryRunner: QueryRunner,
+  ): Promise<Chapter[]> {
+    return queryRunner.manager
+      .createQueryBuilder(Chapter, 'chapter')
+      .leftJoinAndSelect('chapter.course', 'course')
+      .leftJoinAndSelect('chapter.lessons', 'lessons')
+      .where('chapter.id IN (:...ids)', { ids })
+      .andWhere('chapter.deletedAt IS NOT NULL')
+      .withDeleted()
+      .setLock('pessimistic_write', undefined, ['chapter'])
+      .getMany();
+  }
 }
