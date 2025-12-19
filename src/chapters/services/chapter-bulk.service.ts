@@ -430,6 +430,13 @@ export class ChapterBulkService {
         .where('id IN (:...ids)', { ids: validIds })
         .execute();
 
+      await queryRunner.manager
+        .createQueryBuilder()
+        .restore()
+        .from(Lesson)
+        .where('chapterId IN (:...ids)', { ids: validIds })
+        .execute();
+
       this.logger.debug(
         ctx,
         'start',

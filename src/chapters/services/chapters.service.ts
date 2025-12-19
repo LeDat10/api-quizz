@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -35,6 +37,8 @@ import { Action } from 'src/common/status/enums/action.enum';
 import { Lesson } from 'src/lesson/lesson.entity';
 import { ContentLesson } from 'src/content-lesson/content-lesson.entity';
 import { ActionValidationResult } from 'src/common/status/interfaces/validation-result.interface';
+import { LessonStrategyFactory } from 'src/lesson/factories/lesson-strategy.factory';
+import { LessonType } from 'src/lesson/enums/lesson.enum';
 
 @Injectable()
 export class ChaptersService {
@@ -289,7 +293,7 @@ export class ChaptersService {
       chapter.position = newPosition;
 
       if (updateChapterDto.status) {
-        const { allowed, reason } = validateStatusTransition(
+        const validationTransition = validateStatusTransition(
           chapter.status,
           updateChapterDto.status,
           {
@@ -299,9 +303,9 @@ export class ChaptersService {
           },
         );
 
-        if (!allowed) {
-          this.logger.warn(ctx, ACTIONS.UPDATED, reason);
-          throw new BadRequestException(reason);
+        if (!validationTransition.allowed) {
+          this.logger.warn(ctx, ACTIONS.UPDATED, validationTransition.reason);
+          throw new BadRequestException(validationTransition.reason);
         }
 
         if (chapter.lessons && chapter.lessons.length > 0) {
@@ -439,7 +443,35 @@ export class ChaptersService {
           `Chapter has ${chapter.lessons.length} lessons`,
         );
 
+        const lessonsByType = {
+          [LessonType.CONTENT]: [],
+          [LessonType.QUIZ]: [],
+          [LessonType.ASSIGNMENT]: [],
+        };
+
         const lessonIds = chapter.lessons.map((l) => l.id);
+
+        chapter.lessons.forEach((l) => {
+          lessonsByType[l.lessonType]?.push(l.id);
+        });
+
+        if (lessonsByType[LessonType.CONTENT].length > 0) {
+          this.logger.debug(
+            ctx,
+            'start',
+            `restoring ${lessonsByType[LessonType.CONTENT].length} content lessons`,
+          );
+
+          await queryRunner.manager
+            .createQueryBuilder()
+            .softDelete()
+            .from(ContentLesson)
+            .where('lessonId IN (:...ids)', {
+              ids: lessonsByType[LessonType.CONTENT],
+            })
+            .execute();
+        }
+
         await queryRunner.manager
           .createQueryBuilder()
           .softDelete()
@@ -544,11 +576,23 @@ export class ChaptersService {
           `Hard deleting ${chapter.lessons.length} lessons`,
         );
 
+        const lessonsByType = {
+          [LessonType.CONTENT]: [],
+          [LessonType.QUIZ]: [],
+          [LessonType.ASSIGNMENT]: [],
+        };
+
         const lessonIds = chapter.lessons.map((l) => l.id);
 
-        await queryRunner.manager.delete(ContentLesson, {
-          lessonId: In(lessonIds),
+        chapter.lessons.forEach((l) => {
+          lessonsByType[l.lessonType]?.push(l.id);
         });
+
+        if (lessonsByType[LessonType.CONTENT].length > 0) {
+          await queryRunner.manager.delete(ContentLesson, {
+            lessonId: In(lessonsByType[LessonType.CONTENT]),
+          });
+        }
 
         await queryRunner.manager.delete(Lesson, {
           id: In(lessonIds),
@@ -596,15 +640,91 @@ export class ChaptersService {
     this.logger.start(ctx);
 
     try {
-      if (!id) {
-        const reason = 'Missing parameter id';
-        this.logger.warn(ctx, 'failed', reason);
-        throw new BadRequestException(
-          generateMessage('failed', this._entity, id, reason),
+      validateId(id, ctx, this.logger);
+    } catch (error) {
+      return this.errorHandler.handle(ctx, error, this._entity, id);
+    }
+
+    const queryRunner = this.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const existingChapterDeleted =
+        await this.chapterCustomRepository.findSoftDeletedChapterWithQueryRunner(
+          id,
+          queryRunner,
         );
+
+      if (!existingChapterDeleted) {
+        const reason = 'Chapter not found or has not been deleted';
+        this.logger.warn(ctx, ACTIONS.FAILED, reason);
+        throw new NotFoundException(reason);
       }
 
-      const result = await this.chapterRepository.restore(id);
+      const childStatus = existingChapterDeleted.status;
+      const parentStatus = existingChapterDeleted.course.status;
+      const validation = validateStatusHelper(
+        parentStatus,
+        childStatus,
+        Action.RESTORE,
+      );
+
+      if (!validation.allowed) {
+        this.logger.warn(ctx, ACTIONS.RESTORED, validation.reason);
+        throw new BadRequestException(validation.reason);
+      }
+
+      const result = await queryRunner.manager
+        .createQueryBuilder()
+        .restore()
+        .from(Chapter)
+        .where('id = :id', { id: existingChapterDeleted.id })
+        .execute();
+
+      if (existingChapterDeleted.lessons.length > 0) {
+        await queryRunner.manager
+          .createQueryBuilder()
+          .restore()
+          .from(Lesson)
+          .where('chapterId = :id', {
+            id: existingChapterDeleted.id,
+          })
+          .andWhere('deletedAt IS NOT NULL')
+          .execute();
+
+        const lessonsByType = {
+          [LessonType.CONTENT]: [],
+          [LessonType.QUIZ]: [],
+          [LessonType.ASSIGNMENT]: [],
+        };
+
+        existingChapterDeleted.lessons.forEach((lesson) => {
+          if (lesson.deletedAt) {
+            lessonsByType[lesson.lessonType]?.push(lesson.id);
+          }
+        });
+
+        if (lessonsByType[LessonType.CONTENT].length > 0) {
+          this.logger.debug(
+            ctx,
+            'start',
+            `restoring ${lessonsByType[LessonType.CONTENT].length} content lessons`,
+          );
+
+          await queryRunner.manager
+            .createQueryBuilder()
+            .restore()
+            .from(ContentLesson)
+            .where('lessonId IN (:...ids)', {
+              ids: lessonsByType[LessonType.CONTENT],
+            })
+            .andWhere('deletedAt IS NOT NULL')
+            .execute();
+        }
+      }
+
+      await queryRunner.commitTransaction();
 
       if (result.affected === 0) {
         const reason = 'Not found or already active';
@@ -614,24 +734,19 @@ export class ChaptersService {
         );
       }
 
-      const chapter = await this.findChapterById(id);
-      if (!chapter) {
-        const reason = 'Not found after restore';
-        this.logger.warn(ctx, 'failed', reason);
-        throw new NotFoundException(
-          generateMessage('failed', this._entity, id, reason),
-        );
-      }
-
-      const chapterResponse = ChapterResponseDto.fromEntity(chapter);
-      this.logger.success(ctx, 'restored');
-
-      return ResponseFactory.success<ChapterResponseDto>(
-        generateMessage('restored', this._entity, id),
-        chapterResponse,
+      this.logger.success(ctx, ACTIONS.RESTORED);
+      return ResponseFactory.success(
+        generateMessage(ACTIONS.RESTORED, this._entity, id),
+        {
+          id,
+          restoredAt: new Date(),
+        },
       );
     } catch (error) {
+      await queryRunner.rollbackTransaction();
       return this.errorHandler.handle(ctx, error, this._entity, id);
+    } finally {
+      await queryRunner.release();
     }
   }
 

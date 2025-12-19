@@ -52,7 +52,7 @@ export class Chapter {
   @ManyToOne(() => Course, (courses) => courses.chapters)
   course: Course;
 
-  @OneToMany(() => Lesson, (lessons) => lessons.chapter, { nullable: true })
+  @OneToMany(() => Lesson, (lessons) => lessons.chapter)
   lessons: Lesson[];
 
   @CreateDateColumn()

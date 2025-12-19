@@ -6,6 +6,7 @@ import {
   generateRadomString,
   generateSlug,
 } from 'src/common/utils/course.util';
+import { Lesson } from 'src/lesson/lesson.entity';
 
 enum TABLE_RELATIONS {
   COURSE = 'course',
@@ -116,15 +117,25 @@ export class ChapterCustomRepository {
     id: string,
     queryRunner: QueryRunner,
   ): Promise<Chapter | null> {
-    return queryRunner.manager
+    const chapter = await queryRunner.manager
       .createQueryBuilder(Chapter, 'chapter')
       .leftJoinAndSelect('chapter.course', 'course')
-      .leftJoinAndSelect('chapter.lessons', 'lessons')
       .where('chapter.id = :id', { id })
       .andWhere('chapter.deletedAt IS NOT NULL')
       .withDeleted()
       .setLock('pessimistic_write', undefined, ['chapter'])
       .getOne();
+
+    if (!chapter) return null;
+
+    chapter.lessons = await queryRunner.manager
+      .createQueryBuilder(Lesson, 'lesson')
+      .where('lesson.chapterId = :chapterId', { chapterId: chapter.id })
+      .andWhere('lesson.deletedAt IS NOT NULL')
+      .withDeleted()
+      .getMany();
+
+    return chapter;
   }
 
   async reorderChaptersAfterDeletion(
