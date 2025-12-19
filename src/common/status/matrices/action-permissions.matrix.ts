@@ -51,24 +51,24 @@ export const PARENT_STATUS_CHANGE_RULES: Record<Status, ParentChangeRule[]> = {
   ],
 
   [Status.INACTIVE]: [
-    {
-      disallowedChildStatuses: [Status.PUBLISHED],
-      reason: (p, c) =>
-        `Cannot set ${p} to INACTIVE while having PUBLISHED ${c}(s). Deactivate children first.`,
-    },
+    // {
+    //   disallowedChildStatuses: [Status.PUBLISHED],
+    //   reason: (p, c) =>
+    //     `Cannot set ${p} to INACTIVE while having PUBLISHED ${c}(s). Deactivate children first.`,
+    // },
   ],
 
   [Status.ARCHIVED]: [
-    {
-      disallowedChildStatuses: [Status.PUBLISHED],
-      reason: (p, c) =>
-        `Cannot archive ${p} while having PUBLISHED ${c}(s). Archive or deactivate children first.`,
-    },
-    {
-      disallowedChildStatuses: [Status.INACTIVE],
-      reason: (p, c) =>
-        `Cannot archive ${p} while having INACTIVE ${c}(s). Archive children first.`,
-    },
+    // {
+    //   disallowedChildStatuses: [Status.PUBLISHED],
+    //   reason: (p, c) =>
+    //     `Cannot archive ${p} while having PUBLISHED ${c}(s). Archive or deactivate children first.`,
+    // },
+    // {
+    //   disallowedChildStatuses: [Status.INACTIVE],
+    //   reason: (p, c) =>
+    //     `Cannot archive ${p} while having INACTIVE ${c}(s). Archive children first.`,
+    // },
   ],
 
   [Status.PUBLISHED]: [],
