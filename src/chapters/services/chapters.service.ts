@@ -41,6 +41,9 @@ import { LessonStrategyFactory } from 'src/lesson/factories/lesson-strategy.fact
 import { LessonStatus, LessonType } from 'src/lesson/enums/lesson.enum';
 import { getParentStatusChangeImpact } from 'src/common/status/helpers/impact.helper';
 import { getAllowedChildrenStatusesForParent } from 'src/common/status/helpers/get-allowed-children.helper';
+import { ChapterStatusRule } from '../rules/chapter-status.rule';
+import { ChapterPublishRule } from '../rules/chapter-publish.rule';
+import { ChapterImpactRule } from '../rules/chapter-impact.rule';
 
 @Injectable()
 export class ChaptersService {
@@ -801,112 +804,26 @@ export class ChaptersService {
         );
       }
 
-      const validateHelper = validateStatusHelper(
-        chapter.course.status,
-        chapter.status,
-        Action.UPDATE,
-      );
-      if (!validateHelper.allowed) {
-        this.logger.warn(ctx, ACTIONS.UPDATED, validateHelper.reason);
-        throw new BadRequestException(validateHelper.reason);
-      }
+      ChapterStatusRule.validateUpdate(chapter);
 
-      const validateTransition = validateStatusTransition(
-        chapter.status,
+      ChapterStatusRule.validateTransition(chapter, status);
+
+      ChapterStatusRule.validateWithLessons(chapter, status);
+
+      ChapterPublishRule.validate(chapter, status);
+
+      const cascadeUpdatedLessons = await ChapterImpactRule.autoFixLessons(
+        chapter,
         status,
+        queryRunner,
       );
-      if (!validateTransition.allowed) {
-        this.logger.warn(ctx, ACTIONS.UPDATED, validateTransition.reason);
-        throw new BadRequestException(validateTransition.reason);
-      }
-
-      let cascadeUpdatedLessons = 0;
-
-      if (chapter.lessons.length > 0) {
-        const lessonStatuses = chapter.lessons.map((l) => l.lessonStatus);
-
-        const validateParent = validateParentStatusChangeWithChildren(
-          chapter.status,
-          status,
-          lessonStatuses,
-        );
-
-        if (!validateParent.allowed) {
-          this.logger.warn(ctx, ACTIONS.UPDATED, validateParent.reason);
-          throw new BadRequestException(validateParent.reason);
-        }
-
-        const impact = getParentStatusChangeImpact(status, lessonStatuses, {
-          parentName: 'Chapter',
-          childName: 'lessons',
-        });
-
-        if (impact.willMakeInaccessible) {
-          this.logger.warn(ctx, ACTIONS.UPDATED, impact.recommendation);
-          const allowedLessonStatuses =
-            getAllowedChildrenStatusesForParent(status);
-
-          const lessonsToUpdate = chapter.lessons.filter(
-            (l) => !allowedLessonStatuses.includes(l.lessonStatus),
-          );
-
-          if (lessonsToUpdate.length > 0) {
-            let targetLessonStatus: Status;
-
-            if (status === Status.INACTIVE) {
-              targetLessonStatus = Status.INACTIVE;
-            } else if (status === Status.ARCHIVED) {
-              targetLessonStatus = Status.ARCHIVED;
-            } else {
-              throw new BadRequestException(
-                `Cannot auto-update lessons to match ${status} status`,
-              );
-            }
-
-            await queryRunner.manager.update(
-              Lesson,
-              { id: In(lessonsToUpdate.map((l) => l.id)) },
-              { lessonStatus: targetLessonStatus },
-            );
-            cascadeUpdatedLessons = lessonsToUpdate.length;
-
-            this.logger.debug(
-              ctx,
-              'start',
-              `Auto-updated ${cascadeUpdatedLessons} lessons to ${targetLessonStatus}`,
-            );
-          }
-        }
-      }
-
-      if (status === Status.PUBLISHED) {
-        // Check if chapter has lessons
-        if (!chapter.lessons || chapter.lessons.length === 0) {
-          throw new BadRequestException(
-            'Cannot publish chapter without lessons. Add at least one lesson first.',
-          );
-        }
-
-        // Optional: Check if all lessons are ready
-        const draftLessons = chapter.lessons.filter(
-          (l) => l.lessonStatus === Status.DRAFT,
-        ).length;
-
-        if (draftLessons === chapter.lessons.length) {
-          this.logger.warn(
-            ctx,
-            ACTIONS.UPDATED,
-            `All ${draftLessons} lessons are still in DRAFT. Consider publishing at least one lesson.`,
-          );
-          // You can throw error or just warn
-        }
-      }
 
       chapter.status = status;
       const saved = await queryRunner.manager.save(Chapter, chapter);
 
       await queryRunner.commitTransaction();
       this.logger.success(ctx, 'updated');
+
       return ResponseFactory.success(
         generateMessage('updated', this._entity, id),
         {
