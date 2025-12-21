@@ -17,12 +17,14 @@ import { ChangeChapterStatusDto } from '../dtos/change-chapter-status.dto';
 import { validateUUIDArray } from 'src/common/helpers/validators/validator.helper';
 import { ChapterStatus } from '../enums/chapter.enum';
 import { TABLE_RELATIONS } from 'src/constants/constants';
-import { validateAndSetChapterStatus } from '../helpers/validate-status.helper';
 import { Status } from 'src/common/status/enums/status.enum';
 import { Action, validateStatusHelper } from 'src/common/status';
 import { LessonType } from 'src/lesson/enums/lesson.enum';
 import { Lesson } from 'src/lesson/lesson.entity';
 import { ContentLesson } from 'src/content-lesson/content-lesson.entity';
+import { ChapterStatusRule } from '../rules/chapter-status.rule';
+import { ChapterPublishRule } from '../rules/chapter-publish.rule';
+import { ChapterImpactRule } from '../rules/chapter-impact.rule';
 
 @Injectable()
 export class ChapterBulkService {
@@ -233,11 +235,18 @@ export class ChapterBulkService {
       const { ids, status } = changeChapterStatusDto;
       const uniqueIds = [...new Set(ids)];
 
+      this.logger.debug(
+        ctx,
+        'start',
+        `Updating ${uniqueIds.length} chapters to ${status}`,
+      );
+
       // Fetch chapters with relations
-      const chapters = await queryRunner.manager.find(Chapter, {
-        where: { id: In(uniqueIds) },
-        relations: [TABLE_RELATIONS.COURSE],
-      });
+      const chapters =
+        await this.chapterCustomRepository.findChapterByIdsWithQueryRunner(
+          uniqueIds,
+          queryRunner,
+        );
 
       const foundIds = chapters.map((c) => c.id);
       const notFoundIds = uniqueIds.filter((id) => !foundIds.includes(id));
@@ -257,49 +266,98 @@ export class ChapterBulkService {
       }
 
       // Validate business rules
-      const validationErrors: string[] = [];
+      const validationErrors: Array<{
+        id: string;
+        title: string;
+        reason: string;
+      }> = [];
+      const skippedChapters: Array<{
+        id: string;
+        title: string;
+        reason: string;
+      }> = [];
       const chaptersToUpdate: Chapter[] = [];
-      const skippedChapters: Array<{ id: string; reason: string }> = [];
 
       for (const chapter of chapters) {
-        const { canUpdate, reason } = validateAndSetChapterStatus(
-          chapter,
-          status,
-        );
-
-        if (!canUpdate) {
-          if (reason?.startsWith('Already has')) {
-            skippedChapters.push({ id: chapter.id, reason });
-          } else {
-            validationErrors.push(reason as string);
+        try {
+          if (chapter.status === status) {
+            skippedChapters.push({
+              id: chapter.id,
+              title: chapter.title,
+              reason: `Already has status ${status}`,
+            });
+            continue;
           }
-          continue;
-        }
 
-        chaptersToUpdate.push(chapter);
+          // Validate all rules
+          ChapterStatusRule.validateUpdate(chapter);
+          ChapterStatusRule.validateTransition(chapter, status);
+          ChapterStatusRule.validateWithLessons(chapter, status);
+          ChapterPublishRule.validate(chapter, status);
+
+          chaptersToUpdate.push(chapter);
+        } catch (error) {
+          validationErrors.push({
+            id: chapter.id,
+            title: chapter.title,
+            reason: error.message,
+          });
+        }
       }
 
-      // If there are validation errors but some chapters can be updated
-      if (validationErrors.length > 0 && chaptersToUpdate.length > 0) {
+      if (validationErrors.length > 0) {
         this.logger.warn(
           ctx,
-          ACTIONS.UPDATED,
-          `Validation errors: ${validationErrors.join('; ')}`,
+          ACTIONS.FAILED,
+          `${validationErrors.length} chapters failed validation`,
         );
       }
 
-      // If ALL chapters failed validation
-      if (validationErrors.length > 0 && chaptersToUpdate.length === 0) {
-        const reason = `Cannot update status: ${validationErrors.join('; ')}`;
-        this.logger.warn(ctx, ACTIONS.FAILED, reason);
-        throw new BadRequestException(reason);
+      if (skippedChapters.length > 0) {
+        this.logger.debug(
+          ctx,
+          ACTIONS.START,
+          `Skipped ${skippedChapters.length} chapters (already have target status)`,
+        );
       }
 
-      // Update status for valid chapters
+      if (chaptersToUpdate.length === 0) {
+        if (validationErrors.length > 0) {
+          const allReasons = validationErrors
+            .map((e) => `${e.title}: ${e.reason}`)
+            .join('; ');
+          throw new BadRequestException(
+            `Cannot update any chapters. Reasons: ${allReasons}`,
+          );
+        }
+
+        if (skippedChapters.length > 0) {
+          throw new BadRequestException(
+            'All chapters already have the target status',
+          );
+        }
+      }
+
+      let totalLessonsUpdated = 0;
       if (chaptersToUpdate.length > 0) {
         chaptersToUpdate.forEach((chapter) => {
           chapter.status = status;
         });
+
+        for (const chapter of chaptersToUpdate) {
+          const lessonsUpdated = await ChapterImpactRule.autoFixLessons(
+            chapter,
+            status,
+            queryRunner,
+          );
+
+          totalLessonsUpdated += lessonsUpdated;
+        }
+        this.logger.debug(
+          ctx,
+          'start',
+          `Auto-updated ${totalLessonsUpdated} lessons`,
+        );
 
         await queryRunner.manager.save(Chapter, chaptersToUpdate);
       }
@@ -311,18 +369,23 @@ export class ChapterBulkService {
       return ResponseFactory.success(
         `Successfully updated ${chaptersToUpdate.length} chapter(s) to ${status}`,
         {
-          updatedChapters: ChapterResponseDto.fromEntities(chaptersToUpdate),
+          updatedChapters: chaptersToUpdate.map((c) => ({
+            id: c.id,
+            title: c.title,
+            status: c.status,
+            courseId: c.course.id,
+          })),
           updatedAt: new Date(),
           summary: {
             requested: ids.length,
             successful: chaptersToUpdate.length,
             skipped: skippedChapters.length,
-            notFound: notFoundIds.length,
             failed: validationErrors.length,
-            notFoundIds,
-            skippedChapters,
-            validationErrors:
-              validationErrors.length > 0 ? validationErrors : undefined,
+            notFound: notFoundIds.length,
+            cascadeUpdatedLessons: totalLessonsUpdated,
+            notFoundIds: notFoundIds.length,
+            skippedChapters: skippedChapters.length,
+            validationErrors: validationErrors.length,
           },
         },
       );

@@ -13,6 +13,12 @@ enum TABLE_RELATIONS {
   LESSONS = 'lessons',
 }
 
+export type SelectOptions = {
+  chapterFields?: string[];
+  courseFields?: string[];
+  lessonFields?: string[];
+};
+
 @Injectable()
 export class ChapterCustomRepository {
   constructor(
@@ -169,5 +175,45 @@ export class ChapterCustomRepository {
       .withDeleted()
       .setLock('pessimistic_write', undefined, ['chapter'])
       .getMany();
+  }
+
+  async findChapterByIdsWithQueryRunner(
+    ids: string[],
+    queryRunner: QueryRunner,
+    options?: SelectOptions,
+  ): Promise<Chapter[]> {
+    const qb = queryRunner.manager
+      .createQueryBuilder(Chapter, 'chapter')
+      .where('chapter.id IN (:...ids)', { ids })
+      .setLock('pessimistic_write', undefined, ['chapter']);
+
+    if (options?.chapterFields?.length) {
+      const chapterSelects = Array.from(
+        new Set(['id', ...options.chapterFields]),
+      );
+      qb.select(chapterSelects.map((f) => `chapter.${f}`));
+    }
+
+    if (options?.courseFields?.length) {
+      qb.leftJoin('chapter.course', 'course');
+      const courseSelects = Array.from(
+        new Set(['id', ...options.courseFields]),
+      );
+      qb.addSelect(courseSelects.map((f) => `course.${f}`));
+    } else if (options?.courseFields !== null) {
+      qb.leftJoinAndSelect('chapter.course', 'course');
+    }
+
+    if (options?.lessonFields?.length) {
+      qb.leftJoin('chapter.lessons', 'lessons');
+      const lessonSelects = Array.from(
+        new Set(['id', ...options.lessonFields]),
+      );
+      qb.addSelect(lessonSelects.map((f) => `lessons.${f}`));
+    } else if (options?.lessonFields !== null) {
+      qb.leftJoinAndSelect('chapter.lessons', 'lessons');
+    }
+
+    return qb.getMany();
   }
 }
