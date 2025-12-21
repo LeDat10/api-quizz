@@ -275,60 +275,29 @@ export class ChaptersService {
         `Updating chapter: "${chapter.title}" in course: "${chapter.course.title}"`,
       );
 
-      const { allowed, reason } = validateStatusHelper(
-        chapter.course.status,
-        chapter.status,
-        Action.UPDATE,
-      );
+      ChapterStatusRule.validateUpdate(chapter);
 
-      if (!allowed) {
-        this.logger.warn(ctx, ACTIONS.UPDATED, reason);
-        throw new BadRequestException(reason);
-      }
-
-      const originalCourseId = chapter.course.id;
       const originalTitle = chapter.title;
 
-      const newPosition =
-        await this.chapterCustomRepository.getNextPositionWithQueryRunner(
-          originalCourseId,
-          queryRunner,
-        );
-
-      chapter.position = newPosition;
-
       if (updateChapterDto.status) {
-        const validationTransition = validateStatusTransition(
-          chapter.status,
-          updateChapterDto.status,
-          {
-            parentStatus: chapter.course.status,
-            entityName: 'Chapter',
-            parentName: 'Course',
-          },
-        );
-
-        if (!validationTransition.allowed) {
-          this.logger.warn(ctx, ACTIONS.UPDATED, validationTransition.reason);
-          throw new BadRequestException(validationTransition.reason);
-        }
+        ChapterStatusRule.validateTransition(chapter, updateChapterDto.status);
 
         if (chapter.lessons && chapter.lessons.length > 0) {
-          const childStatuses = chapter.lessons.map((l) => l.lessonStatus);
-          const validateParentStatus: ActionValidationResult =
-            validateParentStatusChangeWithChildren(
-              chapter.status,
-              updateChapterDto.status,
-              childStatuses,
-            );
-
-          if (!validateParentStatus.allowed) {
-            this.logger.warn(ctx, ACTIONS.UPDATED, validateParentStatus.reason);
-            throw new BadRequestException(validateParentStatus.reason);
-          }
+          ChapterStatusRule.validateWithLessons(
+            chapter,
+            updateChapterDto.status,
+          );
         }
 
+        ChapterPublishRule.validate(chapter, updateChapterDto.status);
+
         chapter.status = updateChapterDto.status;
+
+        await ChapterImpactRule.autoFixLessons(
+          chapter,
+          updateChapterDto.status,
+          queryRunner,
+        );
       }
 
       // Update slug if title changed
@@ -340,7 +309,7 @@ export class ChaptersService {
         );
         const slug =
           await this.chapterCustomRepository.generateUniqueSlugWithQueryRunner(
-            originalTitle,
+            updateChapterDto.title,
             queryRunner,
           );
         chapter.title = updateChapterDto.title;
@@ -353,7 +322,6 @@ export class ChaptersService {
       const saved = await queryRunner.manager.save(Chapter, chapter);
       await queryRunner.commitTransaction();
 
-      // const chapterUpdated = await this.findChapterById(id);
       const chapterUpdatedResponse = ChapterResponseDto.fromEntity(saved);
       this.logger.success(ctx, 'updated');
       return ResponseFactory.success<ChapterResponseDto>(
